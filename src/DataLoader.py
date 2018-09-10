@@ -50,4 +50,4 @@ class DataLoader(object):
         file_path = '{}/imdb.vocab'.format(DATA_PATH)
         with open(file_path, 'r') as rf:
             vocab = rf.read()
-        self.vocabulaire = [word for word in vocab]
+        self.vocabulaire = [word for word in vocab.split()]
