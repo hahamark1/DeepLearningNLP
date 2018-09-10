@@ -7,6 +7,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from vocab import Vocab, UnkVocab
 import numpy as np
 
+use_LSTM = False
 
 '''
 STEP 1: LOADING DATASET
@@ -81,15 +82,62 @@ class RNNModel(nn.Module):
         # out.size() --> 100, 2
         return out
 
+
+class LSTMModel(nn.Module):
+    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
+        super(LSTMModel, self).__init__()
+        # Hidden dimensions
+        self.hidden_dim = hidden_dim
+
+        # Number of hidden layers
+        self.layer_dim = layer_dim
+
+        # Building your RNN
+        # batch_first=True causes input/output tensors to be of shape
+        # (batch_dim, seq_dim, feature_dim)
+        self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, batch_first=True)
+
+        # Readout layer
+        self.fc = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, x):
+        # Initialize hidden state with zeros
+        #######################
+        #  USE GPU FOR MODEL  #
+        #######################
+        # x = self.embedding(x)
+        if torch.cuda.is_available():
+            h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).cuda())
+        else:
+            h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
+
+        # Initialize cell state
+        if torch.cuda.is_available():
+            c0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).cuda())
+        else:
+            c0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
+
+        # One time step
+        out, (hn, cn) = self.lstm(x, (h0, c0))
+
+        # Index hidden state of last time step
+        # out.size() --> 100, 28, 100
+        out = self.fc(out[:, -1, :])
+        # out.size() --> 100, 2
+        return out
+
 '''
 STEP 4: INSTANTIATE MODEL CLASS
 '''
 input_dim = 1
 hidden_dim = 300
-layer_dim = 5  # ONLY CHANGE IS HERE FROM ONE LAYER TO TWO LAYER
+layer_dim = 3  # ONLY CHANGE IS HERE FROM ONE LAYER TO TWO LAYER
 output_dim = 2
 
-model = RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
+if use_LSTM:
+    model = LSTMModel(input_dim, hidden_dim, layer_dim, output_dim)
+else:
+    model = RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
 print(model)
 
 #######################
@@ -144,7 +192,7 @@ for e in range(n_epochs):
     print('Epoch {}\t Loss {}'.format(e, total_loss))
 
 input_indices = []
-sentence = 'ik ben niet blij'
+sentence = 'ik ben blij'
 words = sentence.split(' ')
 indices = [vocabulary.word2index(word) for word in words]
 input = indices
