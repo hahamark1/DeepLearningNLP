@@ -11,18 +11,6 @@ import string
 from random import shuffle
 
 
-def chunkIt(seq, num):
-    avg = len(seq) / float(num)
-    out = []
-    last = 0.0
-
-    while last < len(seq):
-        out.append(seq[int(last):int(last + avg)])
-        last += avg
-
-    return out
-
-
 use_LSTM = False
 
 '''
