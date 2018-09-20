@@ -6,37 +6,67 @@ from torch.autograd import Variable
 from sklearn.feature_extraction.text import CountVectorizer
 from vocab import Vocab, UnkVocab
 import numpy as np
+from src.DataLoader import DataLoader
+import string
+from random import shuffle
+
+
+def chunkIt(seq, num):
+    avg = len(seq) / float(num)
+    out = []
+    last = 0.0
+
+    while last < len(seq):
+        out.append(seq[int(last):int(last + avg)])
+        last += avg
+
+    return out
+
 
 use_LSTM = False
 
 '''
 STEP 1: LOADING DATASET
 '''
-x = ['ik ben blij', 'ik ben niet blij', 'ik ben niet niet blij',
-     'ik ben happy', 'ik ben niet happy', 'ik ben niet niet happy']
-y = [1, 0, 1, 1, 0, 1]
 
-vectorizer = CountVectorizer()
-vectorizer.fit_transform(x).todense()
-voc_list = list(vectorizer.vocabulary_)
-vocabulary = Vocab()
-vocabulary.word2index(voc_list, train=True)
+dataloader = DataLoader(data_limit=5)
+x_train, y_train, x_test, y_test = dataloader.get_comments()
 
-x_indices = []
-for sentence in x:
+sentence_list = np.concatenate((x_train, x_test))
+word_list = []
+for sentence in sentence_list:
+    word_list.extend(sentence.split(' '))
+word_list = list(set(word_list))
+
+word_vocabulary = Vocab()
+word_vocabulary.word2index(word_list, train=True)
+
+char_list = []
+char_list.extend(string.digits)
+char_list.extend(string.ascii_letters)
+char_list.extend(string.punctuation)
+char_vocabulary = Vocab()
+char_vocabulary.word2index(char_list, train=True)
+
+x_train_indices = []
+x_test_indices = []
+for sentence in x_train:
     words = sentence.split(' ')
-    indices = [vocabulary.word2index(word) for word in words]
-    x_indices.append(torch.tensor(indices))
+    indices = [word_vocabulary.word2index(word) for word in words]
+    x_train_indices.append(indices)
+for sentence in x_test:
+    words = sentence.split(' ')
+    indices = [word_vocabulary.word2index(word.lower()) for word in words]
+    x_test_indices.append(indices)
 
-x_indices = x_indices
 
 '''
 STEP 2: MAKING DATASET ITERABLE
 '''
 
-batch_size = 1
+batch_size = 4
 n_iters = 3000
-num_epochs = n_iters / (len(x) / batch_size)
+num_epochs = n_iters / (len(x_train) / batch_size)
 num_epochs = int(num_epochs)
 
 
@@ -157,7 +187,7 @@ STEP 6: INSTANTIATE OPTIMIZER CLASS
 '''
 learning_rate = 0.1
 
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)  
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
 '''
 STEP 7: TRAIN THE MODEL
@@ -166,7 +196,7 @@ STEP 7: TRAIN THE MODEL
 n_epochs = 25
 for e in range(n_epochs):
     total_loss = 0
-    for i, item in enumerate(x_indices):
+    for i, item in enumerate(x_train_indices):
         # Clear gradients w.r.t. parameters
         optimizer.zero_grad()
 
@@ -178,27 +208,17 @@ for e in range(n_epochs):
         outputs = model(batch)
 
         # Calculate Loss: softmax --> cross entropy loss
-        label = np.array([y[i]])
+        label = np.array([int(y_train[i])])
         label = torch.tensor(label, dtype=torch.int64)
         loss = criterion(outputs, label)
-        total_loss += loss
+        total_loss += loss.item()
 
         # Getting gradients w.r.t. parameters
         loss.backward()
+        nn.utils.clip_grad_norm_(model.parameters(), 1)
 
         # Updating parameters
         optimizer.step()
 
     print('Epoch {}\t Loss {}'.format(e, total_loss))
-
-input_indices = []
-sentence = 'ik ben blij'
-words = sentence.split(' ')
-indices = [vocabulary.word2index(word) for word in words]
-input = indices
-input_batch = np.array([input])
-input_batch = input_batch.reshape((1, len(input), 1))
-input_batch = torch.tensor(input_batch, dtype=torch.float)
-print(model(input_batch))
-
 
