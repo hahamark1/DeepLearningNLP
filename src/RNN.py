@@ -17,7 +17,7 @@ use_LSTM = False
 STEP 1: LOADING DATASET
 '''
 
-dataloader = DataLoader(data_limit=5)
+dataloader = DataLoader(data_limit=500)
 x_train, y_train, x_test, y_test = dataloader.get_comments()
 
 sentence_list = np.concatenate((x_train, x_test))
@@ -40,11 +40,11 @@ x_train_indices = []
 x_test_indices = []
 for sentence in x_train:
     words = sentence.split(' ')
-    indices = [word_vocabulary.word2index(word) for word in words]
+    indices = [word_vocabulary.word2index(word) + 1 for word in words]
     x_train_indices.append(indices)
 for sentence in x_test:
     words = sentence.split(' ')
-    indices = [word_vocabulary.word2index(word.lower()) for word in words]
+    indices = [word_vocabulary.word2index(word) + 1 for word in words]
     x_test_indices.append(indices)
 
 
@@ -56,7 +56,6 @@ batch_size = 4
 n_iters = 3000
 num_epochs = n_iters / (len(x_train) / batch_size)
 num_epochs = int(num_epochs)
-
 
 '''
 STEP 3: CREATE MODEL CLASS
@@ -182,8 +181,8 @@ STEP 7: TRAIN THE MODEL
 '''
 
 n_epochs = 25
+total_loss = 0
 for e in range(n_epochs):
-    total_loss = 0
     for i, item in enumerate(x_train_indices):
         # Clear gradients w.r.t. parameters
         optimizer.zero_grad()
@@ -208,5 +207,8 @@ for e in range(n_epochs):
         # Updating parameters
         optimizer.step()
 
-    print('Epoch {}\t Loss {}'.format(e, total_loss))
+        if i % 20 == 0:
+            print('Epoch {}\t Step {}\t Loss {}'.format(e, i, total_loss))
+            total_loss = 0
+
 
