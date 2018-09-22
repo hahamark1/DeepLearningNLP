@@ -1,6 +1,6 @@
 import os
 
-DATA_PATH = './data'
+DATA_PATH = '../data'
 TRAIN_DATA_PATH = '{}/train'.format(DATA_PATH)
 TEST_DATA_PATH = '{}/test'.format(DATA_PATH)
 
