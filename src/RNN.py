@@ -11,7 +11,9 @@ import string
 from random import shuffle
 
 
+USE_PADDING = False
 use_LSTM = False
+
 
 '''
 STEP 1: LOADING DATASET
@@ -42,6 +44,12 @@ for sentence in x_train:
     words = sentence.split(' ')
     indices = [word_vocabulary.word2index(word) + 1 for word in words]
     x_train_indices.append(indices)
+
+if(USE_PADDING):
+    max_length = max_len = max([len(i) for i in x_train_indices])
+    for ind_list in x_train_indices:
+        ind_list += [0] * (max_length - len(ind_list))
+
 for sentence in x_test:
     words = sentence.split(' ')
     indices = [word_vocabulary.word2index(word) + 1 for word in words]
@@ -188,10 +196,12 @@ for e in range(n_epochs):
         optimizer.zero_grad()
 
         # Forward pass to get output/logits
+
         # outputs.size() --> 100, 10
         batch = np.array(item)
         batch = batch.reshape((1, len(item), 1))
         batch = torch.tensor(batch, dtype=torch.float)
+
         outputs = model(batch)
 
         # Calculate Loss: softmax --> cross entropy loss
