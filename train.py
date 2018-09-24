@@ -17,7 +17,7 @@ use_LSTM = False
 STEP 1: LOADING DATASET
 '''
 
-dataloader = DataLoader(data_limit=5)
+dataloader = DataLoader(data_limit=500)
 x_train, y_train, x_test, y_test = dataloader.get_comments()
 
 sentence_list = np.concatenate((x_train, x_test))
@@ -71,6 +71,7 @@ for sentence in x_test:
 	words = sentence.split()
 	for word in words:
 		indices = [char_vocabulary.word2index(char) + 1 for char in word]
+		indices = torch.tensor(indices, dtype=torch.int64)
 		word_char.append(indices)
 	x_test_char_indices.append(word_char)
 
@@ -82,16 +83,18 @@ else:
 word_vocab_size = len(word_list)
 chr_vocab_size = len(char_list)
 
+
+# Hyperparameters
 learning_rate = 0.01
+eval_freq = 100
+
 print("Model is running on: ", device)
 model = ConvNet(word_vocab_size + 1, chr_vocab_size + 1).to(device)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-# Testing
-
+loss = 0
 for i in range(0, len(x_train_indices)):
 	optimizer.zero_grad()
 	sentence_word_vectors = torch.LongTensor(torch.LongTensor(x_train_indices[i]))
@@ -102,7 +105,32 @@ for i in range(0, len(x_train_indices)):
 	loss = criterion(output, y)
 	loss.backward()
 	optimizer.step()
-	print("Loss: {}".format(loss.item()))
+	loss += loss.item()
+	if i % 50 == 0:
+		print("Current iteration: ", i + 1)
+		print("Average loss: {}".format(loss/(i + 1)))
+	if i % eval_freq == 0:
+		correct_predictions = 0
+		positive_predictions = 0
+		negative_predictions = 0
+		for step in range(len(x_test)):
+			sentence_word_vectors = torch.LongTensor(torch.LongTensor(x_test_indices[step]))
+			sentence_chr_vectors = x_test_char_indices[step]
+			output = model.forward(sentence_word_vectors, sentence_chr_vectors)
+			if torch.argmax(output).data.numpy() == y_test[step]:
+				correct_predictions += 1
+			if torch.argmax(output).data.numpy() == 1:
+				positive_predictions += 1
+			else:
+				negative_predictions += 1
+		print("Accuracy is: ", correct_predictions/len(x_test))
+
+		print("Number of positive predictions is: ", positive_predictions)
+		print("Number of negative predictions is: ", negative_predictions)
+
+
+
+
 # chr_vector = torch.LongTensor(x_train_char_indices[0])
 
 

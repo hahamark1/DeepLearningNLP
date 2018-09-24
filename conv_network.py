@@ -39,7 +39,7 @@ class ConvNet(nn.Module):
         r_sents = self.conv_sentence(u)
         r_sents = torch.max(r_sents, 2)[0]
 
-        out = F.tanh(self.linear_1(r_sents))
+        out = torch.tanh(self.linear_1(r_sents))
         out = self.linear_2(out)
 
         return out
