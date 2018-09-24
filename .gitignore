@@ -1,3 +1,4 @@
 data/*
 !data/.gitkeep
 .idea/*
+src/__pychache__/*
