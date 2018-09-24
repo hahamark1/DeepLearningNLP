@@ -9,6 +9,9 @@ from torchtext import data
 from torchtext import datasets
 from torchtext.vocab import Vectors, GloVe, CharNGram, FastText
 
+from spacy.tokenizer import Tokenizer
+
+
 DATA_PATH = './data'
 TRAIN_DATA_PATH = '{}/train'.format(DATA_PATH)
 TEST_DATA_PATH = '{}/test'.format(DATA_PATH)
@@ -39,8 +42,8 @@ class DataLoader(object):
 
         self.test_loader = 0
 
-        self.load_train_comments()
-        self.load_test_comments()
+        # self.load_train_comments()
+        # self.load_test_comments()
         self.train_loader, self.val_loader, self.test_loader = self.initialize_dataloaders()
 
 
@@ -49,9 +52,12 @@ class DataLoader(object):
         """
         print('Initializing the dataloaders')
 
-        tokenize = lambda x: x.split()
-        TEXT = data.Field(sequential=True, tokenize=tokenize, lower=True)
+        # tokenize = lambda x: x.split()
+        tokenizer = Tokenizer(nlp.vocab)
+        TEXT = data.Field(sequential=True, tokenize=tokenizer, lower=True)
+        # TEXT = data.Field(sequential=True, lower=True)
         LABEL = data.Field(sequential=False)
+
         # make splits for data
         train, val, test = datasets.SST.splits(
             TEXT, LABEL, fine_grained=True, train_subtrees=True,
@@ -62,9 +68,14 @@ class DataLoader(object):
         TEXT.build_vocab(train, vectors=Vectors('wiki.simple.vec', url=url))
         LABEL.build_vocab(train)
 
+        print('len(TEXT.vocab)', len(TEXT.vocab))
+        print('TEXT.vocab.vectors.size()', TEXT.vocab.vectors.size())
+
         # make iterator for splits
         train_iter, val_iter, test_iter = data.BucketIterator.splits(
-        (train, val, test), batch_size=32)
+                    (train, val, test), batch_size=32)
+
+        print(TEXT.reverse(next(iter(train_iter)).text.data))
 
         return train_iter, val_iter, test_iter
 
