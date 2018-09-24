@@ -4,6 +4,10 @@ import csv
 from src.Preprocessor import PreProcessor
 from random import shuffle
 
+from torchtext import data
+from torchtext import datasets
+from torchtext.vocab import Vectors, GloVe, CharNGram, FastText
+
 DATA_PATH = './data'
 TRAIN_DATA_PATH = '{}/train'.format(DATA_PATH)
 TEST_DATA_PATH = '{}/test'.format(DATA_PATH)
@@ -30,11 +34,37 @@ class DataLoader(object):
         self.word_sentiment = {}
         self.twitter_comments = {}
 
+        self.test_loader = 0
+
         self.load_train_comments()
         self.load_test_comments()
+        self.test_loader, self.val_loader, self.train_loader =
+
+
+
+    def initialize_dataloaders():
+
+        TEXT = data.Field()
+        LABEL = data.Field(sequential=False)
+        # make splits for data
+        train, val, test = datasets.SST.splits(
+            TEXT, LABEL, fine_grained=True, train_subtrees=True,
+        filter_pred=lambda ex: ex.label != 'neutral')
+
+        # build the vocabulary
+        url = 'https://s3-us-west-1.amazonaws.com/fasttext-vectors/wiki.simple.vec'
+        TEXT.build_vocab(train, vectors=Vectors('wiki.simple.vec', url=url))
+        LABEL.build_vocab(train)
+
+        # make iterator for splits
+        train_iter, val_iter, test_iter = data.BucketIterator.splits(
+        (train, val, test), batch_size=3)
+
+        return train_iter, val_iter, test_iter
 
     def get_comments(self):
-        x_train = []
+        keys = list(dict.keys())
+        x_train, y_train = []
         y_train = []
         x_test = []
         y_test = []
