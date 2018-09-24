@@ -17,7 +17,7 @@ use_LSTM = False
 STEP 1: LOADING DATASET
 '''
 
-dataloader = DataLoader(data_limit=500)
+dataloader = DataLoader(data_limit=5)
 x_train, y_train, x_test, y_test = dataloader.get_comments()
 
 sentence_list = np.concatenate((x_train, x_test))
@@ -63,6 +63,7 @@ for sentence in x_train:
 	words = sentence.split()
 	for word in words:
 		indices = [char_vocabulary.word2index(char) + 1 for char in word]
+		indices = torch.tensor(indices, dtype=torch.int64)
 		word_char.append(indices)
 	x_train_char_indices.append(word_char)
 for sentence in x_test:
@@ -90,11 +91,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 # Testing
-# print(x_train[0])
-# print(x_train_indices[0])
-# print("-" * 20)
-print(x_train_char_indices[0])
-# sys.exit()
+
 for i in range(0, len(x_train_indices)):
 	optimizer.zero_grad()
 	sentence_word_vectors = torch.LongTensor(torch.LongTensor(x_train_indices[i]))
