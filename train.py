@@ -17,13 +17,13 @@ use_LSTM = False
 STEP 1: LOADING DATASET
 '''
 
-dataloader = DataLoader(data_limit=5)
+dataloader = DataLoader(data_limit=500)
 x_train, y_train, x_test, y_test = dataloader.get_comments()
 
 sentence_list = np.concatenate((x_train, x_test))
 word_list = []
 for sentence in sentence_list:
-	word_list.extend(sentence.split(' '))
+	word_list.extend(sentence.split())
 word_list = list(set(word_list))
 
 word_vocabulary = Vocab()
@@ -49,26 +49,25 @@ x_test_char_indices = []
 
 # Word indices
 for sentence in x_train:
-	words = sentence.split(' ')
+	words = sentence.split()
 	indices = [word_vocabulary.word2index(word) +  1 for word in words]
 	x_train_indices.append(indices)
 for sentence in x_test:
-	words = sentence.split(' ')
+	words = sentence.split()
 	indices = [word_vocabulary.word2index(word.lower()) + 1 for word in words]
 	x_test_indices.append(indices)
 
 # Char indices
 for sentence in x_train:
 	word_char = []
-	words = sentence.split(' ')
+	words = sentence.split()
 	for word in words:
-
 		indices = [char_vocabulary.word2index(char) + 1 for char in word]
 		word_char.append(indices)
 	x_train_char_indices.append(word_char)
 for sentence in x_test:
 	word_char = []
-	words = sentence.split(' ')
+	words = sentence.split()
 	for word in words:
 		indices = [char_vocabulary.word2index(char) + 1 for char in word]
 		word_char.append(indices)
@@ -84,7 +83,7 @@ chr_vocab_size = len(char_list)
 
 learning_rate = 0.01
 print("Model is running on: ", device)
-model = ConvNet(word_vocab_size, chr_vocab_size + 1).to(device)
+model = ConvNet(word_vocab_size + 1, chr_vocab_size + 1).to(device)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
@@ -96,10 +95,17 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 # print("-" * 20)
 print(x_train_char_indices[0])
 # sys.exit()
-for i in range(0, 10):
-	word_vector = torch.LongTensor(torch.LongTensor(x_train_indices[i]))
-	chr_vector = x_train_char_indices[i]
-	model.forward(word_vector, chr_vector)
+for i in range(0, len(x_train_indices)):
+	optimizer.zero_grad()
+	sentence_word_vectors = torch.LongTensor(torch.LongTensor(x_train_indices[i]))
+	sentence_chr_vectors = x_train_char_indices[i]
+	output = model.forward(sentence_word_vectors, sentence_chr_vectors)
+	output = output.reshape(1, -1)
+	y = torch.tensor([y_train[i]], dtype=torch.int64)
+	loss = criterion(output, y)
+	loss.backward()
+	optimizer.step()
+	print("Loss: {}".format(loss.item()))
 # chr_vector = torch.LongTensor(x_train_char_indices[0])
 
 
