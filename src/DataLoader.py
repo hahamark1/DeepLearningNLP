@@ -1,5 +1,6 @@
 import os
 import csv
+import pickle
 
 from src.Preprocessor import PreProcessor
 from random import shuffle
@@ -14,8 +15,10 @@ TEST_DATA_PATH = '{}/test'.format(DATA_PATH)
 VOCAB_PATH = '{}/imdb.vocab'.format(DATA_PATH)
 WORD_SENTIMENT_PATH = '{}/imdbEr.txt'.format(DATA_PATH)
 TWITTER_PATH = '{}/twitter_sentiment.cxv'.format(DATA_PATH)
+DATALOADER_PATH = '{}/dataloaders.p'.format(DATA_PATH)
 
 COMMENTS = ['neg', 'pos']
+BATCH_SIZE = 32
 
 class DataLoader(object):
     """ Object that loads all formats from the datafolder to Python Object
@@ -38,18 +41,21 @@ class DataLoader(object):
 
         self.load_train_comments()
         self.load_test_comments()
-        self.test_loader, self.val_loader, self.train_loader =
+        self.train_loader, self.val_loader, self.test_loader = self.initialize_dataloaders()
 
 
+    def initialize_dataloaders(self):
+        """ Generates a torchtext Dataloader from the SST dataset
+        """
+        print('Initializing the dataloaders')
 
-    def initialize_dataloaders():
-
-        TEXT = data.Field()
+        tokenize = lambda x: x.split()
+        TEXT = data.Field(sequential=True, tokenize=tokenize, lower=True)
         LABEL = data.Field(sequential=False)
         # make splits for data
         train, val, test = datasets.SST.splits(
             TEXT, LABEL, fine_grained=True, train_subtrees=True,
-        filter_pred=lambda ex: ex.label != 'neutral')
+            filter_pred=lambda ex: ex.label != 'neutral')
 
         # build the vocabulary
         url = 'https://s3-us-west-1.amazonaws.com/fasttext-vectors/wiki.simple.vec'
@@ -58,7 +64,7 @@ class DataLoader(object):
 
         # make iterator for splits
         train_iter, val_iter, test_iter = data.BucketIterator.splits(
-        (train, val, test), batch_size=3)
+        (train, val, test), batch_size=32)
 
         return train_iter, val_iter, test_iter
 
@@ -107,8 +113,8 @@ class DataLoader(object):
                     id, sent_score = file.strip('.txt').split('_')
                     self.train_comments[id] = [comment, sentiment_label, sent_score]
 
-        preprocessor = PreProcessor(self.train_comments)
-        self.train_comments = preprocessor.DL
+        # preprocessor = PreProcessor(self.train_comments)
+        # self.train_comments = preprocessor.DL
 
     def load_test_comments(self):
         """ Load the different test comments to the object
@@ -133,19 +139,19 @@ class DataLoader(object):
                     id, sent_score = file.strip('.txt').split('_')
                     self.test_comments[id] = [comment, sentiment_label, sent_score]
 
-    def load_twitter_comments(self):
-        with open(TWITTER_PATH, 'r') as rf:
-            csv_reader = csv.reader(rf, delimiter=',')
-        line_count = 0
-        for row in csv_reader:
-            if line_count == 0:
-                print(f'Column names are {", ".join(row)}')
-                line_count += 1
-            else:
-                self.twitter_comments[row[0]] = [row{2}+row{3}, COMMENTS[int(row{1})],row{1}]
-                print(f'\t{row[0]} works in the {row[1]} department, and was born in {row[2]}.')
-                line_count += 1
-        print(f'Processed {line_count} lines.')
+    # def load_twitter_comments(self):
+    #     with open(TWITTER_PATH, 'r') as rf:
+    #         csv_reader = csv.reader(rf, delimiter=',')
+    #     line_count = 0
+    #     for row in csv_reader:
+    #         if line_count == 0:
+    #             print(f'Column names are {", ".join(row)}')
+    #             line_count += 1
+    #         else:
+    #             self.twitter_comments[row[0]] = [row{2}+row{3}, COMMENTS[int(row{1})],row{1}]
+    #             print(f'\t{row[0]} works in the {row[1]} department, and was born in {row[2]}.')
+    #             line_count += 1
+    #     print(f'Processed {line_count} lines.')
 
     def load_vocabulaire(self):
         """ Load the vocabulaire
