@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 
 class DataSet(object):
@@ -14,6 +15,9 @@ class DataSet(object):
         self.char_idx = 1
         self.word_w_size = 5
         self.chr_w_size = 3
+        self.epochs_completed = 0
+        self.index_in_epoch = 0
+        self.num_examples = 0
 
 
     def add_data(self, comment, sentiment, sent_score):
@@ -33,8 +37,8 @@ class DataSet(object):
     def construct_dataset(self, comments):
         for comment in comments:
             tokens = comment
-            word_mat = [0] * (self.max_sent_len+self.word_w_size-1)
-            char_mat = np.zeros((self.max_sent_len+self.word_w_size-1, self.max_word_len+self.chr_w_size-1))
+            word_mat = torch.zeros((self.max_sent_len+self.word_w_size-1, ))
+            char_mat = torch.zeros((self.max_sent_len+self.word_w_size-1, self.max_word_len+self.chr_w_size-1))
 
             for i in range(len(tokens)):
                 word_mat[int(self.word_w_size/2)+i] = self.word2idx[tokens[i]]
@@ -43,5 +47,33 @@ class DataSet(object):
             self.x_chr.append(char_mat)
             self.x_wrd.append(word_mat)
         self.max_word_len += self.chr_w_size-1
-        self.max_sent_len += self.word_w_size-1    
+        self.max_sent_len += self.word_w_size-1
+        self.num_examples = word_mat.shape[0]
+
+
+      def next_batch(self, batch_size):
+        """
+        Return the next `batch_size` examples from this data set.
+        Args:
+          batch_size: Batch size.
+        """
+        start = self.index_in_epoch
+        self.index_in_epoch += batch_size
+        if self.index_in_epoch > self.num_examples:
+          self.epochs_completed += 1
+
+          perm = np.arange(self.num_examples)
+          np.random.shuffle(perm)
+          self.x_wrd = self.x_wrd[perm]
+          self.x_chr = self.x_chr[perm]
+          self.y = self.y[perm]
+          self.y_score = self.y_score[perm]
+
+          start = 0
+          self.index_in_epoch = batch_size
+          assert batch_size <= self.num_examples
+
+        end = self.index_in_epoch
+        return self.wrd[start:end], self.chr[start:end], self.y[start:end], self.y_score[start:end]
+
 

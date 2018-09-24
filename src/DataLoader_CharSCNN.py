@@ -62,5 +62,4 @@ class DataLoader(object):
 if __name__ == '__main__':
     dl = DataLoader()
     dl.load_train_comments()
-    print(len(dl.train_data.x_chr)
-
+    print(torch.stack(dl_train_data.x_chr))
