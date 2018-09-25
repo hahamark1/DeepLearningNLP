@@ -1,4 +1,5 @@
 import torch
+import os
 import torch.nn as nn
 import torchvision.transforms as transforms
 import torchvision.datasets as dsets
@@ -9,6 +10,7 @@ import numpy as np
 # from src.DataLoader import DataLoader
 import string
 from random import shuffle
+import pickle
 from src.DataLoader_CharSCNN import DataLoader
 
 USE_PADDING = False
@@ -18,11 +20,18 @@ use_LSTM = False
 '''
 STEP 1: LOADING DATASET
 '''
+limit = 0
+data_loader_filename = 'data/dataloader_{}.p'.format(limit)
 
-dl = DataLoader(limit=5)
-
-dl.load_train_comments()
-dl.load_test_comments()
+if os.path.isfile(data_loader_filename):
+    with open(data_loader_filename, 'rb') as rf:
+        dl = pickle.load(rf)
+else:
+    dl = DataLoader(limit=limit)
+    dl.load_train_comments()
+    dl.load_test_comments()
+    with open(data_loader_filename, 'wb') as wf:
+        pickle.dump(dl, wf)
 
 
 # sentence_list = np.concatenate((x_train, x_test))
@@ -63,7 +72,7 @@ STEP 2: MAKING DATASET ITERABLE
 '''
 
 
-batch_size = 4
+batch_size = 128
 n_iters = 3000
 num_epochs = n_iters / (dl.train_data.num_examples / batch_size)
 num_epochs = int(num_epochs)
@@ -73,10 +82,11 @@ STEP 3: CREATE MODEL CLASS
 '''
 
 class RNNModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
+    def __init__(self, word_vocab_size, hidden_dim, layer_dim, output_dim, dim_embedding=128):
         super(RNNModel, self).__init__()
         # Hidden dimensions
         self.hidden_dim = hidden_dim
+        self.embeddings = nn.Embedding(word_vocab_size, dim_embedding, padding_idx = 0)
 
         # Number of hidden layers
         self.layer_dim = layer_dim
@@ -84,7 +94,7 @@ class RNNModel(nn.Module):
         # Building your RNN
         # batch_first=True causes input/output tensors to be of shape
         # (batch_dim, seq_dim, feature_dim)
-        self.rnn = nn.RNN(input_dim, hidden_dim, layer_dim, batch_first=True, nonlinearity='relu')
+        self.rnn = nn.RNN(dim_embedding, hidden_dim, layer_dim, batch_first=True, nonlinearity='relu')
 
         # Readout layer
         self.fc = nn.Linear(hidden_dim, output_dim)
@@ -101,6 +111,7 @@ class RNNModel(nn.Module):
             h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
 
         # One time step
+        x = self.embeddings(x)
         out, hn = self.rnn(x, h0)
 
         # Index hidden state of last time step
@@ -162,10 +173,14 @@ hidden_dim = 300
 layer_dim = 3  # ONLY CHANGE IS HERE FROM ONE LAYER TO TWO LAYER
 output_dim = 2
 
+
+word_seq_size = dl.train_data.seq_size_words
+chr_seq_size = dl.train_data.seq_size_chars
+
 if use_LSTM:
     model = LSTMModel(input_dim, hidden_dim, layer_dim, output_dim)
 else:
-    model = RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
+    model = RNNModel(word_seq_size, hidden_dim, layer_dim, output_dim)
 print(model)
 
 #######################
@@ -194,6 +209,7 @@ n_epochs = 25
 max_steps = 10
 total_loss = 0
 for index in range(n_iters):
+    print('Starting on iteration {}'.format(index+1))
     # Clear gradients w.r.t. parameters
     batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(batch_size)
     optimizer.zero_grad()
@@ -204,12 +220,11 @@ for index in range(n_iters):
     # batch = np.array(batch_inputs_words)
     # batch = batch.reshape((1, len(item), 1))
     # batch = torch.tensor(batch, dtype=torch.float)
-    
+
     outputs = model(batch_inputs_words)
 
     # Calculate Loss: softmax --> cross entropy loss
-    label = np.array([int(batch_targets_label[i])])
-    label = torch.tensor(label, dtype=torch.int64)
+    label = batch_targets_label.type('torch.LongTensor').reshape(-1)
     loss = criterion(outputs, label)
     total_loss += loss.item()
 
@@ -220,6 +235,6 @@ for index in range(n_iters):
     # Updating parameters
     optimizer.step()
 
-    if i % 20 == 0:
+    if index % 20 == 0:
         print('Epoch {}\t Step {}\t Loss {}'.format(e, i, total_loss))
         total_loss = 0

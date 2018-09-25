@@ -1,4 +1,4 @@
-import torch 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -6,7 +6,8 @@ class ConvNet(nn.Module):
     def __init__(self, word_vocab_size, chr_vocab_size, dim_embedding=128):
         super(ConvNet, self).__init__()
         self.dim_embedding = dim_embedding
-        print("Maximum character size:, ", chr_vocab_size)
+        print("Maximum character size: {}".format(chr_vocab_size))
+        print(chr_vocab_size)
         self.word_embedding = nn.Embedding(word_vocab_size, dim_embedding, padding_idx = 0)
         self.chr_embedding = nn.Embedding(chr_vocab_size, dim_embedding, padding_idx = 0)
         self.conv_chr = nn.Conv1d(dim_embedding, dim_embedding, 3, padding=1)
@@ -14,15 +15,21 @@ class ConvNet(nn.Module):
         self.conv_sentence = nn.Conv1d(2*dim_embedding, 2*dim_embedding, 3, padding=1)
         self.linear_1 = nn.Linear(2*dim_embedding, 4*dim_embedding)
         self.linear_2 = nn.Linear(4*dim_embedding, 2)
-        
+
     def forward(self, words, words_in_char, sentence_vector=0):
         # Create word embeddings
+        print(words.shape)
+        print(self.word_embedding)
+        print(words)
         vector_wrds = self.word_embedding(words)
 
         # Create character word embeddings
         vector_wchs = []
         for word_char in words_in_char:
-            vector_chr = self.chr_embedding(word_char).t()
+            print('First time')
+            print(word_char.shape)
+            print(self.chr_embedding)
+            vector_chr = self.chr_embedding(word_char)
             vector_chr = vector_chr.reshape(1, self.dim_embedding, -1)
             word_convolution = self.conv_chr(vector_chr)
             vector_wch = torch.max(word_convolution, 2)[0].squeeze()

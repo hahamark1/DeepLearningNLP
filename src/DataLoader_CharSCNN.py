@@ -29,16 +29,19 @@ class DataLoader(object):
 
         comments = []
         for sentiment in COMMENTS:
+
             folder_path = '{}/{}'.format(TRAIN_DATA_PATH, sentiment)
             for file in os.listdir(folder_path):
+
                 file_path = '{}/{}'.format(folder_path, file)
                 with open(file_path, 'r') as rf:
-                    comment = rf.read().split()
+                    comment = rf.read()
                     if self._limit != 0 and len(comments) == self._limit:
                         break
                     comments.append(comment)
                     id, sent_score = file.strip('.txt').split('_')
                     self.train_data.add_data(comment, sentiment, sent_score)
+        print('Now constructing')
         self.train_data.construct_dataset(comments)
 
     def load_test_comments(self):
@@ -47,6 +50,7 @@ class DataLoader(object):
         print("Load test comments")
 
         comments = []
+        i=1
         for sentiment in COMMENTS:
             folder_path = '{}/{}'.format(TEST_DATA_PATH, sentiment)
             for file in os.listdir(folder_path):
@@ -54,7 +58,7 @@ class DataLoader(object):
                 with open(file_path, 'r') as rf:
                     if self._limit != 0 and len(comments) == self._limit:
                         break
-                    comment = rf.read().split()
+                    comment = rf.read()
                     comments.append(comment)
                     id, sent_score = file.strip('.txt').split('_')
                     self.test_data.add_data(comment, sentiment, sent_score)

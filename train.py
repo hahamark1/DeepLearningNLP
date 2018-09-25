@@ -88,26 +88,27 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-word_vocab_size = dl.train_data.word_idx -1
-chr_vocab_size = dl.train_data.char_idx -1
+word_seq_size = dl.train_data.seq_size_words
+chr_seq_size = dl.train_data.seq_size_chars
 
 # Hyperparameters
 learning_rate = 0.01
 eval_freq = 100
 
-print("Model is running on: ", device)
-model = ConvNet(word_vocab_size + 1, chr_vocab_size + 1).to(device)
+print("Model is running on: {}".format(device))
+model = ConvNet(word_seq_size, chr_seq_size).to(device)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 loss = 0
 for i in range(1000):
-    x_wrd, x_chr, y, y_score = dl.train_data.next_batch(5)
+    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(5)
     optimizer.zero_grad()
-    output = model.forward(x_wrd, x_chr)
+    output = model.forward(batch_inputs_words, batch_inputs_chars)
     output = output.reshape(1, -1)
     # y = torch.tensor([y_train[i]], dtype=torch.int64)
+    y = batch_targets_label.type('torch.LongTensor').reshape(-1)
     loss = criterion(output, y)
     loss.backward()
     optimizer.step()
