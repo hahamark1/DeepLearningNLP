@@ -1,6 +1,6 @@
 import os
 import torch
-from DataSet import DataSet
+from src.DataSet import DataSet
 
 DATA_PATH = 'data'
 TRAIN_DATA_PATH = '{}/train'.format(DATA_PATH)
@@ -11,7 +11,7 @@ COMMENTS = ['pos', 'neg']
 class DataLoader(object):
     """ Object that loads all formats from the datafolder to Python Object
     """
-    def __init__(self, limit=0):
+    def __init__(self, limit=0, use_padding=True):
         super(DataLoader, self).__init__()
 
         # The dicts below follow the format:
@@ -20,6 +20,7 @@ class DataLoader(object):
         self.test_data = DataSet()
         self._limit = limit
         self.vocabulaire = []
+        self._padding = use_padding
 
     def load_train_comments(self):
         """ Load the different train comments to the object
@@ -35,10 +36,10 @@ class DataLoader(object):
                     comment = rf.read().split()
                     if self._limit != 0 and len(comments) == self._limit:
                         break
-                    comments.append(comment)                    
+                    comments.append(comment)
                     id, sent_score = file.strip('.txt').split('_')
                     self.train_data.add_data(comment, sentiment, sent_score)
-        self.train_data.construct_dataset(comments)                    
+        self.train_data.construct_dataset(comments)
 
     def load_test_comments(self):
         """ Load the different test comments to the object

@@ -21,8 +21,10 @@ class DataSet(object):
         self.num_examples = 0
 
     def add_data(self, comment, sentiment, sent_score):
-        self.y.append(sentiment)
-        self.y_score.append(sent_score)
+        # print(sentiment, sent_score)
+        # if
+        self.y.append(torch.tensor([1]) if sentiment == 'pos' else torch.tensor([0]))
+        self.y_score.append(torch.tensor([int(sent_score)]))
         self.max_sent_len = max(self.max_sent_len, len(comment))
         for token in comment:
             if token not in self.word2idx:
@@ -34,6 +36,11 @@ class DataSet(object):
                     self.char2idx[token[i]] = self.char_idx
                     self.char_idx += 1
 
+
+                    # if(USE_PADDING):
+                    #     max_length = max_len = max([len(i) for i in x_train_indices])
+                    #     for ind_list in x_train_indices:
+                    #         ind_list += [0] * (max_length - len(ind_list))
     def construct_dataset(self, comments):
         for comment in comments:
             tokens = comment
@@ -41,17 +48,25 @@ class DataSet(object):
             char_mat = torch.zeros((self.max_sent_len + self.word_w_size - 1, self.max_word_len + self.chr_w_size - 1))
 
             for i in range(len(tokens)):
+
                 word_mat[int(self.word_w_size / 2) + i] = self.word2idx[tokens[i]]
                 for j in range(len(tokens[i])):
                     char_mat[int((self.word_w_size / 2)) + i][int(self.chr_w_size / 2) + j] = self.char2idx[
                         tokens[i][j]]
             self.x_chr.append(char_mat)
             self.x_wrd.append(word_mat)
+
+        self.x_wrd = torch.stack(self.x_wrd)
+        self.x_chr = torch.stack(self.x_chr)
+        print(type(self.x_chr))
+
+        self.y = torch.stack(self.y)
+        self.y_score = torch.stack(self.y_score)
         self.max_word_len += self.chr_w_size - 1
         self.max_sent_len += self.word_w_size - 1
         self.num_examples = word_mat.shape[0]
 
-    def next_batch(self, batch_size):
+    def next_batch(self, batch_size=4):
         """
         Return the next `batch_size` examples from this data set.
         Args:
@@ -74,4 +89,4 @@ class DataSet(object):
             assert batch_size <= self.num_examples
 
         end = self.index_in_epoch
-        return self.wrd[start:end], self.chr[start:end], self.y[start:end], self.y_score[start:end]
+        return self.x_wrd[start:end], self.x_chr[start:end], self.y[start:end], self.y_score[start:end]
