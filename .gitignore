@@ -1,3 +1,7 @@
 data/*
 !data/.gitkeep
 .idea/*
+
+.data/*
+.vector_cache/*
+*.pyc
