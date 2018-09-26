@@ -29,9 +29,10 @@ class DataSet(object):
         # if
         self.y.append(torch.tensor([1]) if sentiment == 'pos' else torch.tensor([0]))
         self.y_score.append(torch.tensor([int(sent_score)]))
-        self.max_sent_len = max(self.max_sent_len, len(comment))
+
         comment = [word_tokenize(sent) for sent in sent_tokenize(comment.replace('<br />',''))]
         comment = [word for sentence in comment for word in sentence]
+        self.max_sent_len = max(self.max_sent_len, len(comment))
 
         for token in comment:
             if token not in self.word2idx:
@@ -70,8 +71,8 @@ class DataSet(object):
         self.y = torch.stack(self.y)
         self.y_score = torch.stack(self.y_score)
 
-        self.max_word_len += self.chr_w_size - 1
-        self.max_sent_len += self.word_w_size - 1
+        # self.max_word_len += self.chr_w_size - 1
+        # self.max_sent_len += self.word_w_size - 1
         self.num_examples = len(comments)
 
     def next_batch(self, batch_size=4):
@@ -101,14 +102,18 @@ class DataSet(object):
             assert batch_size <= self.num_examples
 
         end = self.index_in_epoch
+
+        print('In the batchloader')
+        print(self.max_sent_len)
+        print(self.seq_size_words, self.seq_size_chars)
         for comment in self.comments[start:end]:
+            # print(comment)
             comment = [word_tokenize(sent) for sent in sent_tokenize(comment.replace('<br />',''))]
             comment = [word for sentence in comment for word in sentence]
             word_mat = torch.zeros((self.seq_size_words,))
             char_mat = torch.zeros((self.seq_size_words, self.seq_size_chars)).type('torch.LongTensor')
 
             for i in range(len(comment)):
-
                 word_mat[int(self.word_w_size / 2) + i] = self.word2idx[comment[i]]
                 for j in range(len(comment[i])):
                     char_mat[int((self.word_w_size / 2)) + i][int(self.chr_w_size / 2) + j] = self.char2idx[

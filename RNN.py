@@ -12,6 +12,11 @@ import string
 from random import shuffle
 import pickle
 from src.DataLoader_CharSCNN import DataLoader
+import nltk
+nltk.download('punkt')
+
+from nltk.tokenize import word_tokenize, sent_tokenize
+
 
 USE_PADDING = False
 use_LSTM = False
@@ -33,7 +38,16 @@ else:
     with open(data_loader_filename, 'wb') as wf:
         pickle.dump(dl, wf)
 
-
+# comments = dl.train_data.comments
+#
+# comments = [[word_tokenize(sent) for sent in sent_tokenize(comment.replace('<br />',''))] for comment in comments]
+# comments = [[word for sentence in comment for word in sentence] for comment in comments]
+# comment_lengths = [len(comment) for comment in comments]
+# print(max(comment_lengths))
+# a = np.array(comment_lengths)
+# p = np.percentile(a, 95) # return 50th percentile, e.g median.
+# print(p)
+# print(dl.train_data.max_sent_len)
 # sentence_list = np.concatenate((x_train, x_test))
 # word_list = []
 # for sentence in sentence_list:
@@ -82,7 +96,7 @@ STEP 3: CREATE MODEL CLASS
 '''
 
 class RNNModel(nn.Module):
-    def __init__(self, word_vocab_size, hidden_dim, layer_dim, output_dim, dim_embedding=128):
+    def __init__(self, word_vocab_size, hidden_dim, layer_dim, output_dim, dim_embedding=512):
         super(RNNModel, self).__init__()
         # Hidden dimensions
         self.hidden_dim = hidden_dim
@@ -111,6 +125,9 @@ class RNNModel(nn.Module):
             h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
 
         # One time step
+        print(x.shape)
+        print(x[x!=0])
+        print(self.embeddings)
         x = self.embeddings(x)
         out, hn = self.rnn(x, h0)
 
@@ -212,8 +229,10 @@ for index in range(n_iters):
     print('Starting on iteration {}'.format(index+1))
     # Clear gradients w.r.t. parameters
     batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(batch_size)
+    print('In the train loop')
+    print(batch_inputs_words.shape)
     optimizer.zero_grad()
-
+    print('batch is in')
     # Forward pass to get output/logits
 
     # outputs.size() --> 100, 10
