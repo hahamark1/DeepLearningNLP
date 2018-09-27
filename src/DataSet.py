@@ -25,8 +25,9 @@ class DataSet(object):
         self.num_examples = 0
 
     def add_data(self, comment, sentiment, sent_score):
-        # print(sentiment, sent_score)
-        # if
+        """ For every comment we receive we see if we need to add words and
+        chars to the dicts and if we need to change our max sizes
+        """
         self.y.append(torch.tensor([1]) if sentiment == 'pos' else torch.tensor([0]))
         self.y_score.append(torch.tensor([int(sent_score)]))
 
@@ -45,43 +46,25 @@ class DataSet(object):
                     self.char_idx += 1.
 
     def construct_dataset(self, comments):
+        """ Set some of the dataset specific values at the end of the initialization
+        """
         self.comments = comments
         self.seq_size_words = self.max_sent_len + self.word_w_size - 1
         self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
 
-        		# sentences = [word_tokenize(sent) for comment in iter(DataLoader.train_comments.values()) \
-        		# 				for sent in sent_tokenize(comment[0].replace('<br />',''))]
-        # for tokens in comments:
-        #     print('Now at comment {}'.format(o))
-        #     print(tokens)
-        #     # tokens = [word_tokenize(sent) for sent_tokenize(tokens.replace('<br />',''))
-        #     # o+=1
-        #     word_mat = torch.zeros((self.seq_size_words,))
-        #     char_mat = torch.zeros((self.seq_size_words, self.seq_size_chars)).type('torch.LongTensor')
-        #
-        #     for i in range(len(tokens)):
-        #
-        #         word_mat[int(self.word_w_size / 2) + i] = self.word2idx[tokens[i]]
-        #         for j in range(len(tokens[i])):
-        #             char_mat[int((self.word_w_size / 2)) + i][int(self.chr_w_size / 2) + j] = self.char2idx[
-        #                 tokens[i][j]]
-        #     self.x_chr.append(char_mat)
-        #     self.x_wrd.append(word_mat)
-
         self.y = torch.stack(self.y)
         self.y_score = torch.stack(self.y_score)
 
-        # self.max_word_len += self.chr_w_size - 1
-        # self.max_sent_len += self.word_w_size - 1
         self.num_examples = len(comments)
         self.vocab_size_words = len(self.word2idx.keys())
         self.voczb_size_char = len(self.char2idx.keys())
 
-    def next_batch(self, batch_size=4):
+    def next_batch(self, batch_size=4, padding=True):
         """
         Return the next `batch_size` examples from this data set.
         Args:
           batch_size: Batch size.
+          padding: Boolean, if True, pad to the max sizes with zeros, else ??
         """
 
         self.x_chr = []
@@ -104,24 +87,22 @@ class DataSet(object):
             assert batch_size <= self.num_examples
 
         end = self.index_in_epoch
-
-        # print('In the batchloader')
-        # print(self.max_sent_len)
-        # print(self.seq_size_words, self.seq_size_chars)
         for comment in self.comments[start:end]:
-            # print(comment)
-            comment = [word_tokenize(sent) for sent in sent_tokenize(comment.replace('<br />',''))]
-            comment = [word for sentence in comment for word in sentence]
-            word_mat = torch.zeros((self.seq_size_words,))
-            char_mat = torch.zeros((self.seq_size_words, self.seq_size_chars)).type('torch.LongTensor')
+            if padding:
+                comment = [word_tokenize(sent) for sent in sent_tokenize(comment.replace('<br />',''))]
+                comment = [word for sentence in comment for word in sentence]
+                word_mat = torch.zeros((self.seq_size_words,))
+                char_mat = torch.zeros((self.seq_size_words, self.seq_size_chars)).type('torch.LongTensor')
 
-            for i in range(len(comment)):
-                word_mat[int(self.word_w_size / 2) + i] = float(self.word2idx[comment[i]])
-                for j in range(len(comment[i])):
-                    char_mat[int((self.word_w_size / 2)) + i][int(self.chr_w_size / 2) + j] = float(self.char2idx[
-                        comment[i][j]])
-            self.x_chr.append(char_mat)
-            self.x_wrd.append(word_mat)
+                for i in range(len(comment)):
+                    word_mat[int(self.word_w_size / 2) + i] = float(self.word2idx[comment[i]])
+                    for j in range(len(comment[i])):
+                        char_mat[int((self.word_w_size / 2)) + i][int(self.chr_w_size / 2) + j] = float(self.char2idx[
+                            comment[i][j]])
+                self.x_chr.append(char_mat)
+                self.x_wrd.append(word_mat)
+            else:
+                ## TODO: We need to see how we implement batches if we do not have a set size
 
         self.x_wrd = torch.stack(self.x_wrd).type('torch.FloatTensor')
         self.x_chr = torch.stack(self.x_chr).type('torch.FloatTensor')

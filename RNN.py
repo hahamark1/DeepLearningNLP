@@ -40,60 +40,8 @@ else:
     with open(data_loader_filename, 'wb') as wf:
         pickle.dump(dl, wf)
 
-print(dl.train_data.vocab_size_words)
-
-# comments = dl.train_data.comments
-#
-# comments = [[word_tokenize(sent) for sent in sent_tokenize(comment.replace('<br />',''))] for comment in comments]
-# comments = [[word for sentence in comment for word in sentence] for comment in comments]
-# comment_lengths = [len(comment) for comment in comments]
-# print(max(comment_lengths))
-# a = np.array(comment_lengths)
-# p = np.percentile(a, 95) # return 50th percentile, e.g median.
-# print(p)
-# print(dl.train_data.max_sent_len)
-# sentence_list = np.concatenate((x_train, x_test))
-# word_list = []
-# for sentence in sentence_list:
-#     word_list.extend(sentence.split(' '))
-# word_list = list(set(word_list))
-#
-# word_vocabulary = Vocab()
-# word_vocabulary.word2index(word_list, train=True)
-#
-# char_list = []
-# char_list.extend(string.digits)
-# char_list.extend(string.ascii_letters)
-# char_list.extend(string.punctuation)
-# char_vocabulary = Vocab()
-# char_vocabulary.word2index(char_list, train=True)
-
-# x_train_indices = []
-# x_test_indices = []
 
 
-# for sentence in x_train:
-#     words = sentence.split(' ')
-#     indices = [word_vocabulary.word2index(word) + 1 for word in words]
-#     x_train_indices.append(indices)
-#
-#
-#
-# for sentence in x_test:
-#     words = sentence.split(' ')
-#     indices = [word_vocabulary.word2index(word) + 1 for word in words]
-#     x_test_indices.append(indices)
-
-
-'''
-STEP 2: MAKING DATASET ITERABLE
-'''
-
-
-batch_size = 128
-n_iters = 3000
-num_epochs = n_iters / (dl.train_data.num_examples / batch_size)
-num_epochs = int(num_epochs)
 
 '''
 STEP 3: CREATE MODEL CLASS
@@ -104,7 +52,6 @@ class RNNModel(nn.Module):
         super(RNNModel, self).__init__()
         # Hidden dimensions
         self.hidden_dim = hidden_dim
-        self.embeddings = nn.Linear(1, dim_embedding)
         # .type(torch.LongTensor)
         # Number of hidden layers
         self.layer_dim = layer_dim
@@ -112,6 +59,7 @@ class RNNModel(nn.Module):
         # Building your RNN
         # batch_first=True causes input/output tensors to be of shape
         # (batch_dim, seq_dim, feature_dim)
+        self.embeddings = nn.Linear(1, dim_embedding)
         self.rnn = nn.RNN(dim_embedding, hidden_dim, layer_dim, batch_first=True, nonlinearity='relu')
 
         # Readout layer
@@ -130,19 +78,17 @@ class RNNModel(nn.Module):
 
         # One time step
         x = self.embeddings(x)
-        x = x.type(torch.FloatTensor)
         out, hn = self.rnn(x, h0)
 
         # Index hidden state of last time step
         # out.size() --> 100, 28, 100
-        # out[:, -1, :] --> 100, 100 --> just want last time step hidden states!
         out = self.fc(out[:, -1, :])
         # out.size() --> 100, 2
         return out
 
 
 class LSTMModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
+    def __init__(self, word_vocab_size, hidden_dim, layer_dim, output_dim, dim_embedding=512):
         super(LSTMModel, self).__init__()
         # Hidden dimensions
         self.hidden_dim = hidden_dim
@@ -153,7 +99,8 @@ class LSTMModel(nn.Module):
         # Building your RNN
         # batch_first=True causes input/output tensors to be of shape
         # (batch_dim, seq_dim, feature_dim)
-        self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, batch_first=True)
+        self.embeddings = nn.Linear(1, dim_embedding)
+        self.lstm = nn.LSTM(dim_embedding, hidden_dim, layer_dim, batch_first=True)
 
         # Readout layer
         self.fc = nn.Linear(hidden_dim, output_dim)
@@ -176,6 +123,7 @@ class LSTMModel(nn.Module):
             c0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
 
         # One time step
+        x = self.embeddings(x)
         out, (hn, cn) = self.lstm(x, (h0, c0))
 
         # Index hidden state of last time step
@@ -191,7 +139,6 @@ input_dim = 1
 hidden_dim = 20
 layer_dim = 3  # ONLY CHANGE IS HERE FROM ONE LAYER TO TWO LAYER
 output_dim = 2
-
 
 word_seq_size = dl.train_data.seq_size_words
 chr_seq_size = dl.train_data.seq_size_chars
@@ -210,42 +157,44 @@ if torch.cuda.is_available():
     model.cuda()
 
 '''
-STEP 5: INSTANTIATE LOSS CLASS
+STEP 5:SET HYPERPARAMETERS
 '''
-criterion = nn.CrossEntropyLoss()
+batch_size = 128
+n_iters = 3000
+num_epochs = n_iters / (dl.train_data.num_examples / batch_size)
+num_epochs = int(num_epochs)
+n_epochs = 25
+max_steps = 10
+total_loss = 0
+learning_rate = 0.1
+
 
 '''
-STEP 6: INSTANTIATE OPTIMIZER CLASS
+STEP 6: SET OPTIMIZER AND CRITERION
 '''
-learning_rate = 0.1
+
+criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
 
 '''
 STEP 7: TRAIN THE MODEL
 '''
 
-n_epochs = 25
-max_steps = 10
-total_loss = 0
 for index in range(n_iters):
     t1 = time.time()
     print('Starting on iteration {}'.format(index+1))
-    # Clear gradients w.r.t. parameters
+    # load new batch
     batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(batch_size)
-    # batch_targets = torch.stack(batch_targets).reshape(-1)
-    # one_hot = torch.zeros(word_seq_size, batch_size, dl.train_data.vocab_size_words)
-    # Fill the empty array with one hot vectors
-    # batch_inputs_words = one_hot.scatter_(2, batch_inputs, 1)
+
+    if torch.cuda.is_available():
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores =
+                    batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
     batch_inputs_words = batch_inputs_words.t().reshape(batch_size, word_seq_size, 1)
 
     optimizer.zero_grad()
+
     # Forward pass to get output/logits
-
-    # outputs.size() --> 100, 10
-    # batch = np.array(batch_inputs_words)
-    # batch = batch.reshape((1, len(item), 1))
-    # batch = torch.tensor(batch, dtype=torch.float)
-
     outputs = model(batch_inputs_words)
 
     # Calculate Loss: softmax --> cross entropy loss
