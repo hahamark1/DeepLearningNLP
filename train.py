@@ -21,68 +21,6 @@ dl = DataLoader(limit=50)
 dl.load_train_comments()
 dl.load_test_comments()
 
-# print(torch.stack(dl.train_data.x_chr))
-# train_data = dataloader.train_data
-# test_data = dataloader.test_data
-#
-#
-#
-#
-# sentence_list = np.concatenate((x_train, x_test))
-# word_list = []
-# for sentence in sentence_list:
-#     word_list.extend(sentence.split())
-# word_list = list(set(word_list))
-#
-# word_vocabulary = Vocab()
-# word_vocabulary.word2index(word_list, train=True)
-#
-# char_list = []
-# for sentence in sentence_list:
-#     char_list.extend([char for char in sentence])
-# char_list = list(set(char_list))
-#
-# # char_list.extend(string.digits)
-# # char_list.extend(string.ascii_letters)
-# # char_list.extend(string.punctuation)
-# char_vocabulary = Vocab()
-# char_vocabulary.word2index(char_list, train=True)
-#
-# x_train_indices = []
-# x_test_indices = []
-# x_train_char_indices = []
-# x_test_char_indices = []
-#
-# # Padding inndex is zero, so we shift everything with plus 1
-#
-# # Word indices
-# for sentence in x_train:
-#     words = sentence.split()
-#     indices = [word_vocabulary.word2index(word) + 1 for word in words]
-#     x_train_indices.append(indices)
-# for sentence in x_test:
-#     words = sentence.split()
-#     indices = [word_vocabulary.word2index(word.lower()) + 1 for word in words]
-#     x_test_indices.append(indices)
-#
-# # Char indices
-# for sentence in x_train:
-#     word_char = []
-#     words = sentence.split()
-#     for word in words:
-#         indices = [char_vocabulary.word2index(char) + 1 for char in word]
-#         indices = torch.tensor(indices, dtype=torch.int64)
-#         word_char.append(indices)
-#     x_train_char_indices.append(word_char)
-# for sentence in x_test:
-#     word_char = []
-#     words = sentence.split()
-#     for word in words:
-#         indices = [char_vocabulary.word2index(char) + 1 for char in word]
-#         indices = torch.tensor(indices, dtype=torch.int64)
-#         word_char.append(indices)
-#     x_test_char_indices.append(word_char)
-
 if torch.cuda.is_available():
     device = "cuda:0"
 else:
@@ -103,11 +41,11 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 loss = 0
 for i in range(1000):
-    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(5)
+    # # TODO: The line below will not work because padding is false is not yet implemented
+    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(5, padding=False)
     optimizer.zero_grad()
     output = model.forward(batch_inputs_words, batch_inputs_chars)
     output = output.reshape(1, -1)
-    # y = torch.tensor([y_train[i]], dtype=torch.int64)
     y = batch_targets_label.type('torch.LongTensor').reshape(-1)
     loss = criterion(output, y)
     loss.backward()

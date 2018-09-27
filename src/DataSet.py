@@ -103,7 +103,7 @@ class DataSet(object):
                 self.x_wrd.append(word_mat)
             else:
                 ## TODO: We need to see how we implement batches if we do not have a set size
-
+                raise NotImplementedError
         self.x_wrd = torch.stack(self.x_wrd).type('torch.FloatTensor')
         self.x_chr = torch.stack(self.x_chr).type('torch.FloatTensor')
 
