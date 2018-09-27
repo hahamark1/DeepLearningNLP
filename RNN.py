@@ -1,5 +1,7 @@
 import torch
 import os
+import time
+from datetime import datetime
 import torch.nn as nn
 import torchvision.transforms as transforms
 import torchvision.datasets as dsets
@@ -25,7 +27,7 @@ use_LSTM = False
 '''
 STEP 1: LOADING DATASET
 '''
-limit = 0
+limit = 500
 data_loader_filename = 'data/dataloader_{}.p'.format(limit)
 
 if os.path.isfile(data_loader_filename):
@@ -37,6 +39,8 @@ else:
     dl.load_test_comments()
     with open(data_loader_filename, 'wb') as wf:
         pickle.dump(dl, wf)
+
+print(dl.train_data.vocab_size_words)
 
 # comments = dl.train_data.comments
 #
@@ -100,8 +104,8 @@ class RNNModel(nn.Module):
         super(RNNModel, self).__init__()
         # Hidden dimensions
         self.hidden_dim = hidden_dim
-        self.embeddings = nn.Embedding(word_vocab_size, dim_embedding, padding_idx = 0)
-
+        self.embeddings = nn.Linear(1, dim_embedding)
+        # .type(torch.LongTensor)
         # Number of hidden layers
         self.layer_dim = layer_dim
 
@@ -125,10 +129,8 @@ class RNNModel(nn.Module):
             h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
 
         # One time step
-        print(x.shape)
-        print(x[x!=0])
-        print(self.embeddings)
         x = self.embeddings(x)
+        x = x.type(torch.FloatTensor)
         out, hn = self.rnn(x, h0)
 
         # Index hidden state of last time step
@@ -186,7 +188,7 @@ class LSTMModel(nn.Module):
 STEP 4: INSTANTIATE MODEL CLASS
 '''
 input_dim = 1
-hidden_dim = 300
+hidden_dim = 20
 layer_dim = 3  # ONLY CHANGE IS HERE FROM ONE LAYER TO TWO LAYER
 output_dim = 2
 
@@ -226,13 +228,17 @@ n_epochs = 25
 max_steps = 10
 total_loss = 0
 for index in range(n_iters):
+    t1 = time.time()
     print('Starting on iteration {}'.format(index+1))
     # Clear gradients w.r.t. parameters
     batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(batch_size)
-    print('In the train loop')
-    print(batch_inputs_words.shape)
+    # batch_targets = torch.stack(batch_targets).reshape(-1)
+    # one_hot = torch.zeros(word_seq_size, batch_size, dl.train_data.vocab_size_words)
+    # Fill the empty array with one hot vectors
+    # batch_inputs_words = one_hot.scatter_(2, batch_inputs, 1)
+    batch_inputs_words = batch_inputs_words.t().reshape(batch_size, word_seq_size, 1)
+
     optimizer.zero_grad()
-    print('batch is in')
     # Forward pass to get output/logits
 
     # outputs.size() --> 100, 10
@@ -253,7 +259,10 @@ for index in range(n_iters):
 
     # Updating parameters
     optimizer.step()
+    t2 = time.time()
+    examples_per_second = batch_size/float(t2-t1)
 
-    if index % 20 == 0:
-        print('Epoch {}\t Step {}\t Loss {}'.format(e, i, total_loss))
+    if index % 1 == 0:
+        print('[{}]\t Step {}\t Loss {} \t Examples/Sec = {:.2f},'.format(datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        index, total_loss, examples_per_second))
         total_loss = 0

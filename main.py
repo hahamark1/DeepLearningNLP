@@ -8,6 +8,5 @@ def main():
     print(batch.label)
     # PP = PreProcessor(DL, stemming=True, stopwords_removal=True, charecter_removal=True)
 
-
 if __name__ == '__main__':
     main()
