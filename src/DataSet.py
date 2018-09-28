@@ -5,6 +5,7 @@ nltk.download('punkt')
 
 from nltk.tokenize import word_tokenize, sent_tokenize
 
+UNK_TOKEN = 'UNK'
 
 class DataSet(object):
     def __init__(self):
@@ -44,20 +45,36 @@ class DataSet(object):
                 if token[i] not in self.char2idx:
                     self.char2idx[token[i]] = self.char_idx
                     self.char_idx += 1.
+        token = UNK_TOKEN
 
-    def construct_dataset(self, comments):
+        self.word2idx[token] = self.word_idx
+        self.word_idx += 1.
+        self.max_word_len = max(self.max_word_len, len(token))
+        self.char2idx[token] = self.char_idx
+        self.char_idx += 1.
+
+    def construct_dataset(self, comments, train_set=False):
         """ Set some of the dataset specific values at the end of the initialization
         """
         self.comments = comments
         self.seq_size_words = self.max_sent_len + self.word_w_size - 1
         self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
 
-        self.y = torch.stack(self.y)
-        self.y_score = torch.stack(self.y_score)
-
         self.num_examples = len(comments)
         self.vocab_size_words = len(self.word2idx.keys())
         self.voczb_size_char = len(self.char2idx.keys())
+        if train_set:
+            self.word2idx = train_set.word2idx
+            self.char2idx = train_set.char2idx
+            self.vocab_size_words = len(self.word2idx.keys())
+            self.vocab_size_char = len(self.char2idx.keys())
+            self.max_sent_len = train_set.max_sent_len
+            self.max_word_len = train_set.max_word_len
+            self.seq_size_words = self.max_sent_len + self.word_w_size - 1
+            self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
+
+
+
 
     def next_batch(self, batch_size=4, padding=True):
         """
@@ -77,10 +94,11 @@ class DataSet(object):
 
             perm = np.arange(self.num_examples)
             np.random.shuffle(perm)
-            self.x_wrd = self.x_wrd[perm]
-            self.x_chr = self.x_chr[perm]
-            self.y = self.y[perm]
-            self.y_score = self.y_score[perm]
+            print(perm)
+            self.comments = [self.comments[i] for i in perm]
+            # self.x_chr[:] = [self.x_chr[i] for i in perm]
+            self.y = [self.y[i] for i in perm]
+            self.y_score = [self.y_score[i] for i in perm]
 
             start = 0
             self.index_in_epoch = batch_size
@@ -95,16 +113,25 @@ class DataSet(object):
                 char_mat = torch.zeros((self.seq_size_words, self.seq_size_chars)).type('torch.LongTensor')
 
                 for i in range(len(comment)):
-                    word_mat[int(self.word_w_size / 2) + i] = float(self.word2idx[comment[i]])
+                    if comment[i] not in self.word2idx:
+                        word_mat[int(self.word_w_size / 2) + i] = float(self.word2idx[UNK_TOKEN])
+                    else:
+                        word_mat[int(self.word_w_size / 2) + i] = float(self.word2idx[comment[i]])
                     for j in range(len(comment[i])):
-                        char_mat[int((self.word_w_size / 2)) + i][int(self.chr_w_size / 2) + j] = float(self.char2idx[
-                            comment[i][j]])
+                        if comment[i][j] not in self.char2idx:
+                            char_mat[int((self.word_w_size / 2)) + i][int(self.chr_w_size / 2) + j] = float(self.char2idx[UNK_TOKEN])
+                        else:
+                            char_mat[int((self.word_w_size / 2)) + i][int(self.chr_w_size / 2) + j] = float(self.char2idx[comment[i][j]])
                 self.x_chr.append(char_mat)
                 self.x_wrd.append(word_mat)
             else:
                 ## TODO: We need to see how we implement batches if we do not have a set size
                 raise NotImplementedError
+
+        self.y_out = torch.stack(self.y)
+        self.y_score_out = torch.stack(self.y_score)
+
         self.x_wrd = torch.stack(self.x_wrd).type('torch.FloatTensor')
         self.x_chr = torch.stack(self.x_chr).type('torch.FloatTensor')
 
-        return self.x_wrd, self.x_chr, self.y[start:end], self.y_score[start:end]
+        return self.x_wrd, self.x_chr, self.y_out[start:end], self.y_score_out[start:end]

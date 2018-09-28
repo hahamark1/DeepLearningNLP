@@ -99,10 +99,10 @@ def train(dl, num_epochs):
             total_loss = 0
 
         if index % 10 == 0:
-            test(dl, index)
+            test(dl, index, model)
 
 
-def test(dl, model):
+def test(dl, step, model):
     word_seq_size = dl.test_data.seq_size_words
     chr_seq_size = dl.train_data.seq_size_chars
 
@@ -115,7 +115,6 @@ def test(dl, model):
     if torch.cuda.is_available():
         batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
     batch_inputs_words = batch_inputs_words.t().reshape(-1, word_seq_size, 1)
-
     # Forward pass to get output/logits
     outputs = model(batch_inputs_words)
 
@@ -132,7 +131,7 @@ def test(dl, model):
 
 
 def main():
-    limit = 500
+    limit = 16
     data_loader_filename = 'data/dataloader_{}.p'.format(limit)
 
     if os.path.isfile(data_loader_filename):
@@ -141,7 +140,7 @@ def main():
     else:
         dl = DataLoader(limit=limit)
         dl.load_train_comments()
-        dl.load_test_comments()
+        dl.load_test_comments(dl.train_data)
         with open(data_loader_filename, 'wb') as wf:
             pickle.dump(dl, wf)
 

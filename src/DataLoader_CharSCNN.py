@@ -44,7 +44,7 @@ class DataLoader(object):
         print('Now constructing')
         self.train_data.construct_dataset(comments)
 
-    def load_test_comments(self):
+    def load_test_comments(self, train_set):
         """ Load the different test comments to the object
         """
         print("Load test comments")
@@ -62,7 +62,7 @@ class DataLoader(object):
                     comments.append(comment)
                     id, sent_score = file.strip('.txt').split('_')
                     self.test_data.add_data(comment, sentiment, sent_score)
-        self.test_data.construct_dataset(comments)
+        self.test_data.construct_dataset(comments, train_set)
 
 
     def load_vocabulaire(self):
