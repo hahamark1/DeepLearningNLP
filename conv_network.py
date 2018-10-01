@@ -21,7 +21,6 @@ class ConvNet(nn.Module):
         vector_wrds = self.word_embedding(words)
 
         # Create character word embeddings
-        print(torch.max(words_in_char))
         vector_wchs = self.chr_embedding(words_in_char)
         word_wchs = self.conv_chr(vector_wchs)
         word_wchs, _ = torch.max(word_wchs, 2)
