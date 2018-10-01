@@ -97,7 +97,7 @@ def train(dl, config):
         t2 = time.time()
         examples_per_second = config.batch_size/float(t2-t1)
 
-        if index % 1 == 0:
+        if index % config.print_every == 0:
             print('[{}]\t Step {}\t Loss {} \t Examples/Sec = {:.2f},'.format(datetime.now().strftime("%Y-%m-%d %H:%M"),
                             index, total_loss, examples_per_second))
             total_loss = 0
@@ -105,8 +105,8 @@ def train(dl, config):
         if index % config.save_every == 0:
             save_checkpoint(model, optimizer)
 
-        # if index % 10 == 0:
-            # test(dl, index, model)
+        if index % config.test_every == 0:
+            test(dl, index, model)
 
 
 def test(dl, step, model, test_size=config.test_size):
@@ -198,8 +198,8 @@ if __name__ == "__main__":
 
     # Misc params
     parser.add_argument('--summary_path', type=str, default="./summaries_dl4nlt/", help='Output path for summaries')
-    parser.add_argument('--print_every', type=int, default=5, help='How often to print training progress')
-    parser.add_argument('--sample_every', type=int, default=100, help='How often to sample from the model')
+    parser.add_argument('--print_every', type=int, default=100, help='How often to print training progress')
+    parser.add_argument('--test_every', type=int, default=100, help='How often to test the model')
     parser.add_argument('--save_every', type=int, default=100, help='How often to save checkpoint')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint file')
     parser.add_argument('--test_size', type=int, default=1000, help='Number of samples in the test')

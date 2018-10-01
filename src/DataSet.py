@@ -74,8 +74,6 @@ class DataSet(object):
             self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
 
 
-
-
     def next_batch(self, batch_size=4, padding=True):
         """
         Return the next `batch_size` examples from this data set.
