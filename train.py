@@ -26,26 +26,28 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-word_seq_size = dl.train_data.seq_size_words
-chr_seq_size = dl.train_data.seq_size_chars
+word_seq_size = dl.train_data.vocab_size_words
+chr_seq_size = dl.train_data.vocab_size_char + 100
 
 # Hyperparameters
 learning_rate = 0.01
 eval_freq = 10
+batch_size = 5
 
 print("Model is running on: {}".format(device))
-model = ConvNet(word_seq_size, chr_seq_size).to(device)
+max_sentence_length = dl.train_data.next_batch(batch_size=1, padding=True, type='long')[0].shape[1]
+model = ConvNet(word_seq_size, chr_seq_size, max_sentence_length).to(device)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, nesterov=True)
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 loss_average = 0
 for i in range(1000):
     # # TODO: The line below will not work because padding is false is not yet implemented
-    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(5, padding=True, type='long')
+    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = \
+        dl.train_data.next_batch(batch_size, padding=True, type='long')
     optimizer.zero_grad()
     output = model.forward(batch_inputs_words, batch_inputs_chars)
-    output = output.reshape(1, -1)
     y = batch_targets_label.type('torch.LongTensor').reshape(-1)
     loss = criterion(output, y)
     loss.backward()
@@ -55,24 +57,24 @@ for i in range(1000):
         print("Current iteration: ", i + 1)
         print("Average loss: {}".format(loss_average / (i + 1)))
         print("LOSS: {}".format(loss_average))
-    if i % eval_freq == 0:
-        correct_predictions = 0
-        positive_predictions = 0
-        negative_predictions = 0
-        for step in range(len(x_test)):
-            sentence_word_vectors = torch.LongTensor(torch.LongTensor(x_test_indices[step]))
-            sentence_chr_vectors = x_test_char_indices[step]
-            output = model.forward(sentence_word_vectors, sentence_chr_vectors)
-            if torch.argmax(output).data.numpy() == y_test[step]:
-                correct_predictions += 1
-            if torch.argmax(output).data.numpy() == 1:
-                positive_predictions += 1
-            else:
-                negative_predictions += 1
-        print("Accuracy is: ", correct_predictions / len(x_test))
-
-        print("Number of positive predictions is: ", positive_predictions)
-        print("Number of negative predictions is: ", negative_predictions)
+    # if i % eval_freq == 0:
+    #     correct_predictions = 0
+    #     positive_predictions = 0
+    #     negative_predictions = 0
+    #     for step in range(len(x_test)):
+    #         sentence_word_vectors = torch.LongTensor(torch.LongTensor(x_test_indices[step]))
+    #         sentence_chr_vectors = x_test_char_indices[step]
+    #         output = model.forward(sentence_word_vectors, sentence_chr_vectors)
+    #         if torch.argmax(output).data.numpy() == y_test[step]:
+    #             correct_predictions += 1
+    #         if torch.argmax(output).data.numpy() == 1:
+    #             positive_predictions += 1
+    #         else:
+    #             negative_predictions += 1
+    #     print("Accuracy is: ", correct_predictions / len(x_test))
+    #
+    #     print("Number of positive predictions is: ", positive_predictions)
+    #     print("Number of negative predictions is: ", negative_predictions)
 
 
 
