@@ -17,8 +17,8 @@ class DataSet(object):
         self.max_word_len = 0
         self.word2idx = {}
         self.char2idx = {}
-        self.word_idx = 1.
-        self.char_idx = 1.
+        self.word_idx = 1
+        self.char_idx = 1
         self.word_w_size = 5
         self.chr_w_size = 3
         self.epochs_completed = 0
@@ -39,23 +39,26 @@ class DataSet(object):
         for token in comment:
             if token not in self.word2idx:
                 self.word2idx[token] = self.word_idx
-                self.word_idx += 1.
+                self.word_idx += 1
                 self.max_word_len = max(self.max_word_len, len(token))
             for i in range(len(token)):
                 if token[i] not in self.char2idx:
                     self.char2idx[token[i]] = self.char_idx
-                    self.char_idx += 1.
-        token = UNK_TOKEN
+                    self.char_idx += 1
 
-        self.word2idx[token] = self.word_idx
-        self.word_idx += 1.
-        self.max_word_len = max(self.max_word_len, len(token))
-        self.char2idx[token] = self.char_idx
-        self.char_idx += 1.
+
+
 
     def construct_dataset(self, comments, train_set=False):
         """ Set some of the dataset specific values at the end of the initialization
         """
+        token = UNK_TOKEN
+        self.word2idx[token] = self.word_idx
+        self.word_idx += 1
+        self.max_word_len = max(self.max_word_len, len(token))
+        self.char2idx[token] = self.char_idx
+        self.char_idx += 1
+
         self.comments = comments
         self.seq_size_words = self.max_sent_len + self.word_w_size - 1
         self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
@@ -63,6 +66,7 @@ class DataSet(object):
         self.num_examples = len(comments)
         self.vocab_size_words = len(self.word2idx.keys())
         self.voczb_size_char = len(self.char2idx.keys())
+
         if train_set:
             self.word2idx = train_set.word2idx
             self.char2idx = train_set.char2idx
