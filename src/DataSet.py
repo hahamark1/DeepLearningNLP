@@ -24,6 +24,8 @@ class DataSet(object):
         self.epochs_completed = 0
         self.index_in_epoch = 0
         self.num_examples = 0
+        self.vocab_size_words = 0
+        self.vocab_size_char = 0
 
     def add_data(self, comment, sentiment, sent_score):
         """ For every comment we receive we see if we need to add words and
@@ -46,9 +48,6 @@ class DataSet(object):
                     self.char2idx[token[i]] = self.char_idx
                     self.char_idx += 1
 
-
-
-
     def construct_dataset(self, comments, train_set=False):
         """ Set some of the dataset specific values at the end of the initialization
         """
@@ -60,18 +59,33 @@ class DataSet(object):
         self.char_idx += 1
 
         self.comments = comments
+
+        # Shuffle
+        comments_shuffled = []
+        y_shuffled = []
+        y_score_shuffled = []
+        index_shuf = list(range(len(comments)))
+        np.random.shuffle(index_shuf)
+        for i in index_shuf:
+            comments_shuffled.append(self.comments[i])
+            y_shuffled.append(self.y[i])
+            y_score_shuffled.append(self.y_score[i])
+        self.comments = comments_shuffled
+        self.y = y_shuffled
+        self.y_score = y_score_shuffled
+
         self.seq_size_words = self.max_sent_len + self.word_w_size - 1
         self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
 
         self.num_examples = len(comments)
-        self.vocab_size_words = len(self.word2idx.keys())
-        self.voczb_size_char = len(self.char2idx.keys())
+        self.vocab_size_words = len(self.word2idx.keys()) + 1
+        self.vocab_size_char = len(self.char2idx.keys()) + 1
 
         if train_set:
             self.word2idx = train_set.word2idx
             self.char2idx = train_set.char2idx
-            self.vocab_size_words = len(self.word2idx.keys())
-            self.vocab_size_char = len(self.char2idx.keys())
+            self.vocab_size_words = len(self.word2idx.keys()) + 1
+            self.vocab_size_char = len(self.char2idx.keys()) + 1
             self.max_sent_len = train_set.max_sent_len
             self.max_word_len = train_set.max_word_len
             self.seq_size_words = self.max_sent_len + self.word_w_size - 1
@@ -92,14 +106,6 @@ class DataSet(object):
         self.index_in_epoch += batch_size
         if self.index_in_epoch > self.num_examples or self.index_in_epoch == 0:
             self.epochs_completed += 1
-
-            perm = np.arange(self.num_examples)
-            np.random.shuffle(perm)
-            print(perm)
-            self.comments = [self.comments[i] for i in perm]
-            # self.x_chr[:] = [self.x_chr[i] for i in perm]
-            self.y = [self.y[i] for i in perm]
-            self.y_score = [self.y_score[i] for i in perm]
 
             start = 0
             self.index_in_epoch = batch_size
