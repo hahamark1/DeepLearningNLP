@@ -91,10 +91,7 @@ def train(dl, config):
         outputs = model(batch_inputs_words)
 
         # Calculate Loss: softmax --> cross entropy loss
-        if torch.cuda.is_available():
-            label = batch_targets_label.type('torch.cuda.LongTensor').reshape(-1)
-        else:
-            label = batch_targets_label.type('torch.LongTensor').reshape(-1)
+        label = batch_targets_label.type('torch.LongTensor').reshape(-1)
         loss = criterion(outputs, label)
         total_loss += loss.item()
 
@@ -123,7 +120,7 @@ def train(dl, config):
             save_checkpoint(model, optimizer)
 
         if index % config.test_every == 0:
-            test(dl, index, model, test_size=config.test_size)
+            test(dl, index, model, config.test_size)
 
 
 def test(dl, step, model, test_size=1000):
@@ -216,8 +213,9 @@ def evaluate(dl, config):
 
 
 def main(config):
-    limit = 16
+    limit = 20
     data_loader_filename = 'data/dataloader_{}.p'.format(limit)
+
 
     if os.path.isfile(data_loader_filename):
         with open(data_loader_filename, 'rb') as rf:
@@ -226,6 +224,7 @@ def main(config):
         dl = DataLoader(limit=limit)
         dl.load_train_comments()
         dl.load_test_comments(dl.train_data)
+        dl.load_twitter_comments()
         with open(data_loader_filename, 'wb') as wf:
             pickle.dump(dl, wf)
 
@@ -262,7 +261,7 @@ if __name__ == "__main__":
     parser.add_argument('--summary_path', type=str, default="./summaries_dl4nlt/", help='Output path for summaries')
     parser.add_argument('--print_every', type=int, default=100, help='How often to print training progress')
     parser.add_argument('--test_every', type=int, default=100, help='How often to test the model')
-    parser.add_argument('--save_every', type=int, default=500   , help='How often to save checkpoint')
+    parser.add_argument('--save_every', type=int, default=100, help='How often to save checkpoint')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint file')
     parser.add_argument('--test_size', type=int, default=1000, help='Number of samples in the test')
 

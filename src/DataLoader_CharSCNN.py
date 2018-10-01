@@ -18,9 +18,29 @@ class DataLoader(object):
         # {Comment_ID: [comment, pos/neg, sentiment_score]}
         self.train_data = DataSet()
         self.test_data = DataSet()
+        self.twitter_train_data = DataSet()
         self._limit = limit
         self.vocabulaire = []
         self._padding = use_padding
+
+    def load_twitter_comments():
+        comments = []
+        with open(TWITTER_PATH, 'r') as rf:
+            csv_reader = csv.reader(rf, delimiter=',')
+            line_count = 0
+            for row in csv_reader:
+                if line_count == 0:
+                    line_count += 1
+                else:
+                    if self._limit != 0 and len(comments) == self._limit:
+                        break
+                    comments.append(comment)
+                    id, sent_score = row[1], row[1]
+                    self.twitter_train_data.add_data(comment, sentiment, sent_score)
+                    line_count += 1
+            print('Now constructing')
+            self.twitter_train_data.construct_dataset(comments)
+            print('Processed {} lines.'.format(line_count))
 
     def load_train_comments(self):
         """ Load the different train comments to the object
