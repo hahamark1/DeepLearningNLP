@@ -19,7 +19,7 @@ STEP 1: LOADING DATASET
 
 dl = DataLoader(limit=50)
 dl.load_train_comments()
-dl.load_test_comments()
+dl.load_test_comments(dl.train_data)
 
 if torch.cuda.is_available():
     device = "cuda:0"
@@ -31,18 +31,18 @@ chr_seq_size = dl.train_data.seq_size_chars
 
 # Hyperparameters
 learning_rate = 0.01
-eval_freq = 100
+eval_freq = 10
 
 print("Model is running on: {}".format(device))
 model = ConvNet(word_seq_size, chr_seq_size).to(device)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-loss = 0
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, nesterov=True)
+loss_average = 0
 for i in range(1000):
     # # TODO: The line below will not work because padding is false is not yet implemented
-    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(5, padding=False)
+    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(5, padding=True, type='long')
     optimizer.zero_grad()
     output = model.forward(batch_inputs_words, batch_inputs_chars)
     output = output.reshape(1, -1)
@@ -50,10 +50,11 @@ for i in range(1000):
     loss = criterion(output, y)
     loss.backward()
     optimizer.step()
-    loss += loss.item()
+    loss_average += loss.item()
     if i % 50 == 0:
         print("Current iteration: ", i + 1)
-        print("Average loss: {}".format(loss / (i + 1)))
+        print("Average loss: {}".format(loss_average / (i + 1)))
+        print("LOSS: {}".format(loss_average))
     if i % eval_freq == 0:
         correct_predictions = 0
         positive_predictions = 0

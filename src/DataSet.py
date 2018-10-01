@@ -73,10 +73,7 @@ class DataSet(object):
             self.seq_size_words = self.max_sent_len + self.word_w_size - 1
             self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
 
-
-
-
-    def next_batch(self, batch_size=4, padding=True):
+    def next_batch(self, batch_size=4, padding=True, type='float'):
         """
         Return the next `batch_size` examples from this data set.
         Args:
@@ -131,7 +128,11 @@ class DataSet(object):
         self.y_out = torch.stack(self.y)
         self.y_score_out = torch.stack(self.y_score)
 
-        self.x_wrd = torch.stack(self.x_wrd).type('torch.FloatTensor')
-        self.x_chr = torch.stack(self.x_chr).type('torch.FloatTensor')
+        if type=='float':
+            self.x_wrd = torch.stack(self.x_wrd).type('torch.FloatTensor')
+            self.x_chr = torch.stack(self.x_chr).type('torch.FloatTensor')
+        else:
+            self.x_wrd = torch.stack(self.x_wrd).type('torch.LongTensor')
+            self.x_chr = torch.stack(self.x_chr).type('torch.LongTensor')
 
         return self.x_wrd, self.x_chr, self.y_out[start:end], self.y_score_out[start:end]

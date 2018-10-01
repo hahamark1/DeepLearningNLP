@@ -50,7 +50,7 @@ class DataLoader(object):
         print("Load test comments")
 
         comments = []
-        i=1
+        i = 1
         for sentiment in COMMENTS:
             folder_path = '{}/{}'.format(TEST_DATA_PATH, sentiment)
             for file in os.listdir(folder_path):

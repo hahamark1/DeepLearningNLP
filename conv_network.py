@@ -38,11 +38,7 @@ class ConvNet(nn.Module):
 
         # Combine word and character word embeddings
         u = torch.cat((vector_wrds, vector_wchs), 1).t().reshape(1, 2*self.dim_embedding, -1)
-        #
-        # r_sents = []
-        # for u_i in u:
-        #     r_sent = self.conv_sentence(u_i.reshape(1, self.dim_embedding * 2, -1)).squeeze()
-        #     r_sents.append(r_sent)
+
         r_sents = self.conv_sentence(u)
         r_sents = torch.max(r_sents, 2)[0]
 

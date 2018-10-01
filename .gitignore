@@ -5,3 +5,7 @@ data/*
 .data/*
 .vector_cache/*
 *.pyc
+*.tar
+*.pyc
+*.nl
+*.pyc
