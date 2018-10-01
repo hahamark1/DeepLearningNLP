@@ -1,10 +1,12 @@
 import os
 import torch
 from src.DataSet import DataSet
+import csv
 
 DATA_PATH = 'data'
 TRAIN_DATA_PATH = '{}/train'.format(DATA_PATH)
 TEST_DATA_PATH = '{}/test'.format(DATA_PATH)
+TWITTER_PATH = '{}/train.txt'.format(DATA_PATH)
 
 COMMENTS = ['pos', 'neg']
 
@@ -23,24 +25,22 @@ class DataLoader(object):
         self.vocabulaire = []
         self._padding = use_padding
 
-    def load_twitter_comments():
+    def load_twitter_comments(self):
         comments = []
+        line_count = 0
         with open(TWITTER_PATH, 'r') as rf:
-            csv_reader = csv.reader(rf, delimiter=',')
-            line_count = 0
-            for row in csv_reader:
+            file = rf.read().splitlines()
+            for row in file:
+                sentiment, comment = row[0], row[1]
                 if line_count == 0:
                     line_count += 1
                 else:
-                    if self._limit != 0 and len(comments) == self._limit:
-                        break
                     comments.append(comment)
-                    id, sent_score = row[1], row[1]
-                    self.twitter_train_data.add_data(comment, sentiment, sent_score)
+                    self.train_data.add_data(comment, sentiment, sentiment)
                     line_count += 1
-            print('Now constructing')
-            self.twitter_train_data.construct_dataset(comments)
-            print('Processed {} lines.'.format(line_count))
+        print('Now constructing')
+        self.train_data.construct_dataset(comments)
+        print('Processed {} lines.'.format(line_count))
 
     def load_train_comments(self):
         """ Load the different train comments to the object

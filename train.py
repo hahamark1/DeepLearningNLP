@@ -213,15 +213,16 @@ def evaluate(dl, config):
 
 def main(config):
     limit = 0
-    data_loader_filename = 'data/dataloader_{}.p'.format(limit)
+    data_loader_filename = 'data/dataloader_twitter_{}.p'.format(limit)
 
     if os.path.isfile(data_loader_filename):
         with open(data_loader_filename, 'rb') as rf:
             dl = pickle.load(rf)
     else:
         dl = DataLoader(limit=limit)
-        dl.load_train_comments()
-        dl.load_test_comments(dl.train_data)
+        dl.load_twitter_comments()
+        # dl.load_train_comments()
+        # dl.load_test_comments(dl.train_data)
         with open(data_loader_filename, 'wb') as wf:
             pickle.dump(dl, wf)
 
