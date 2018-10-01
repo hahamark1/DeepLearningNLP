@@ -65,9 +65,9 @@ def train(dl, num_epochs):
     for index in range(n_iters):
         t1 = time.time()
         print('Starting on iteration {}'.format(index+1))
+        
         # load new batch
         batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(batch_size)
-        print(batch_inputs_words.shape)
         if torch.cuda.is_available():
             batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
         batch_inputs_words = batch_inputs_words.t().reshape(batch_size, word_seq_size, 1)
@@ -111,7 +111,6 @@ def test(dl, step, model):
     # load new batch
     batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.test_data.next_batch(dl.test_data.num_examples)
 
-    print(batch_inputs_words.shape)
     if torch.cuda.is_available():
         batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
     batch_inputs_words = batch_inputs_words.t().reshape(-1, word_seq_size, 1)
