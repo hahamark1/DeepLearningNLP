@@ -109,14 +109,14 @@ def train(dl, config):
             # test(dl, index, model)
 
 
-def test(dl, step, model):
+def test(dl, step, model, test_size=config.test_size):
     word_seq_size = dl.test_data.seq_size_words
     chr_seq_size = dl.train_data.seq_size_chars
 
     criterion = nn.CrossEntropyLoss()
     t1 = time.time()
     # load new batch
-    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.test_data.next_batch(dl.test_data.num_examples)
+    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.test_data.next_batch(test_size)
 
     if torch.cuda.is_available():
         batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
@@ -202,6 +202,7 @@ if __name__ == "__main__":
     parser.add_argument('--sample_every', type=int, default=100, help='How often to sample from the model')
     parser.add_argument('--save_every', type=int, default=100, help='How often to save checkpoint')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint file')
+    parser.add_argument('--test_size', type=int, default=1000, help='Number of samples in the test')
 
     config = parser.parse_args()
 
