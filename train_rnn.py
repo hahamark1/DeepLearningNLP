@@ -106,10 +106,10 @@ def train(dl, config):
             save_checkpoint(model, optimizer)
 
         if index % config.test_every == 0:
-            test(dl, index, model)
+            test(dl, index, model, test_size=config.test_size)
 
 
-def test(dl, step, model, test_size=config.test_size):
+def test(dl, step, model, test_size=1000):
     word_seq_size = dl.test_data.seq_size_words
     chr_seq_size = dl.train_data.seq_size_chars
 
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     parser.add_argument('--summary_path', type=str, default="./summaries_dl4nlt/", help='Output path for summaries')
     parser.add_argument('--print_every', type=int, default=100, help='How often to print training progress')
     parser.add_argument('--test_every', type=int, default=100, help='How often to test the model')
-    parser.add_argument('--save_every', type=int, default=500, help='How often to save checkpoint')
+    parser.add_argument('--save_every', type=int, default=500   , help='How often to save checkpoint')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint file')
     parser.add_argument('--test_size', type=int, default=1000, help='Number of samples in the test')
 
