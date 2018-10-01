@@ -9,3 +9,5 @@ data/*
 *.pyc
 *.nl
 *.pyc
+
+!data/twitter_sentiment.csv
