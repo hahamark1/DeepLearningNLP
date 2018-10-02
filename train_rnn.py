@@ -181,7 +181,7 @@ def evaluate(dl, config):
     chr_seq_size = dl.train_data.seq_size_chars
 
     if config.use_LSTM:
-        model = LSTMModel(input_dim, config.hidden_dim, config.num_layers, config.output_dim)
+        model = LSTMModel(word_seq_size, config.hidden_dim, config.num_layers, config.output_dim)
     else:
         model = RNNModel(word_seq_size, config.hidden_dim, config.num_layers, config.output_dim)
 
