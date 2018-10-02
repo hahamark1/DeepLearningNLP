@@ -11,3 +11,4 @@ data/*
 *.pyc
 
 !data/twitter_sentiment.csv
+!data/train.txt
