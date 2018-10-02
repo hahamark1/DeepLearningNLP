@@ -121,6 +121,7 @@ class DataSet(object):
 
                 for i in range(len(comment)):
                     if i == self.seq_size_words:
+                        print("I cut of this sentence at {}".format(i))
                         break
                     if comment[i] not in self.word2idx:
                         word_mat[int(self.word_w_size / 2) + i] = float(self.word2idx[UNK_TOKEN])
