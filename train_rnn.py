@@ -36,7 +36,7 @@ def save_mistakes(output, labels, inputs, dl):
         for comment in comments:
             truth = 'positive' if comment[0] == 1 else 'negative'
             pred = 'positive' if comment[0] == 0 else 'negative'
-            wf.write('The following comment was predicted as {} but truely was {}. \n\n{}'.format(pred, truth, comment[1]))
+            wf.write('The following comment was predicted as {} but truely was {}. \n\n{}\n\n'.format(pred, truth, comment[1]))
     return
 
 
@@ -215,6 +215,7 @@ def evaluate(dl, config):
 
 
 def main(config):
+<<<<<<< HEAD
     limit = 0
     data_loader_filename = '{}dataloader_twitter_{}.p'.format(config.data_path, limit)
 

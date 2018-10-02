@@ -106,7 +106,7 @@ def train(dl, config):
             save_checkpoint(model, optimizer, config.checkpoint_path)
 
         if index % config.test_every == 0:
-            acc = test(dl, index, model, test_size=config.test_size)
+            loss, acc = test(dl, index, model, test_size=config.test_size)
             writer.add_scalar('accuracy', acc, index)
 
 
@@ -139,7 +139,7 @@ def test(dl, step, model, test_size=1000):
     print('Here the test results after {} steps.\n[{}]\t Loss {} \t Acc {} \t Examples/Sec = {:.2f}, pos_labels: {}, neg_labels: {}'.format(step, datetime.now().strftime("%Y-%m-%d %H:%M"),
                     loss.item(), acc, examples_per_second, torch.sum(label), len(label) - torch.sum(label)))
 
-    return acc
+    return loss, acc
 
 def print_flags():
   """
@@ -248,7 +248,7 @@ if __name__ == "__main__":
     # Training params
     parser.add_argument('--use_padding', type=bool, default=False, help='To use padding on input sentences.')
     parser.add_argument('--batch_size', type=int, default=64, help='Number of examples to process in a batch')
-    parser.add_argument('--learning_rate', type=float, default=0.1, help='Learning rate')
+    parser.add_argument('--learning_rate', type=float, default=0.01, help='Learning rate')
     parser.add_argument('--num_epochs', type=int, default=25, help='Number of epochs')
     parser.add_argument('--n_iters', type=int, default=3000, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=5.0, help='--')
