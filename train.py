@@ -3,26 +3,15 @@ import time
 from datetime import datetime
 import torch
 import torch.nn as nn
-import torchvision.transforms as transforms
-import torchvision.datasets as dsets
 import argparse
 from conv_network import ConvNet
 
-from sklearn.feature_extraction.text import CountVectorizer
-# from vocab import Vocab, UnkVocab
-import numpy as np
-# from src.DataLoader import DataLoader
 from RNN import RNNModel
 from LSTM import LSTMModel
-import string
-from random import shuffle
 import pickle
 from src.DataLoader_CharSCNN import DataLoader
 import nltk
 nltk.download('punkt')
-
-
-from nltk.tokenize import word_tokenize, sent_tokenize
 from tensorboardX import SummaryWriter
 
 def save_mistakes(output, labels, inputs, dl):
@@ -116,7 +105,7 @@ def train(dl, config):
             total_loss = 0
 
         if index % config.save_every == 0:
-            save_checkpoint(model, optimizer)
+            save_checkpoint(model, optimizer, config.checkpoint_path)
 
         if index % config.test_every == 0:
             test(dl, index, model, test_size=config.test_size)
@@ -134,19 +123,21 @@ def test(dl, step, model, test_size=1000):
     if torch.cuda.is_available():
         batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
     # Forward pass to get output/logits
-    print(torch.max(batch_inputs_words))
     outputs = model(batch_inputs_words, batch_inputs_chars)
 
     # Calculate Loss: softmax --> cross entropy loss
-    label = batch_targets_label.type('torch.LongTensor').reshape(-1)
+    if torch.cuda.is_available():
+        label = batch_targets_label.type('torch.cuda.LongTensor').squeeze()
+    else:
+        label = batch_targets_label.type('torch.LongTensor').squeeze()
     loss = criterion(outputs, label)
     acc = calc_accuracy(outputs, label)
 
     t2 = time.time()
     examples_per_second = config.batch_size/float(t2-t1)
 
-    print('Here the test results after {} steps.\n[{}]\t Loss {} \t Acc {} \t Examples/Sec = {:.2f},'.format(step, datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    loss.item(), acc, examples_per_second))
+    print('Here the test results after {} steps.\n[{}]\t Loss {} \t Acc {} \t Examples/Sec = {:.2f}, pos_labels: {}, neg_labels: {}'.format(step, datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    loss.item(), acc, examples_per_second, torch.sum(label), len(label) - torch.sum(label)))
 
 def print_flags():
   """
@@ -157,10 +148,10 @@ def print_flags():
     print(key + ' : ' + str(value))
   print('\n')
 
-def save_checkpoint(model, optimizer, filename='checkpoints_dl4nlt/checkpoint.pth.tar'):
-    if not os.path.exists('./checkpoints_dl4nlt'):
-        os.mkdir('./checkpoints_dl4nlt')
-    filename = "checkpoints_dl4nlt/checkpoint_{}.pth.tar".format(datetime.now().strftime("%d_%m_%H_%M"),)
+def save_checkpoint(model, optimizer, path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+    filename = "{}/checkpoint_{}.pth.tar".format(path, datetime.now().strftime("%d_%m_%H_%M"),)
     checkpoint = {
         # 'epoch': epoch + 1,
         'model': model.state_dict(),
@@ -213,15 +204,16 @@ def evaluate(dl, config):
 
 def main(config):
     limit = 0
-    data_loader_filename = 'data/dataloader_{}.p'.format(limit)
+    data_loader_filename = '{}dataloader_twitter_{}.p'.format(config.data_path, limit)
 
     if os.path.isfile(data_loader_filename):
         with open(data_loader_filename, 'rb') as rf:
             dl = pickle.load(rf)
     else:
-        dl = DataLoader(limit=limit)
-        dl.load_train_comments()
-        dl.load_test_comments(dl.train_data)
+        dl = DataLoader(limit=limit, data_path=config.data_path)
+        dl.load_twitter_comments()
+        # dl.load_train_comments()
+        # dl.load_test_comments(dl.train_data)
         with open(data_loader_filename, 'wb') as wf:
             pickle.dump(dl, wf)
 
@@ -245,6 +237,9 @@ if __name__ == "__main__":
     parser.add_argument('--num_layers', type=int, default=3, help='Number of stacked RNN/LSTM layers in the model')
     parser.add_argument('--output_dim', type=int, default=2, help='Output dimension of the model')
     parser.add_argument('--input_dim', type=int, default=1, help='Input dimension of the model')
+    parser.add_argument('--data_path', type=str, default='data')
+    parser.add_argument('--checkpoint_path', type=str, default='checkpoints_dl4nlt')
+
 
     # Training params
     parser.add_argument('--use_padding', type=bool, default=False, help='To use padding on input sentences.')
@@ -256,11 +251,11 @@ if __name__ == "__main__":
 
     # Misc params
     parser.add_argument('--summary_path', type=str, default="./summaries_dl4nlt/", help='Output path for summaries')
-    parser.add_argument('--print_every', type=int, default=100, help='How often to print training progress')
+    parser.add_argument('--print_every', type=int, default=1, help='How often to print training progress')
     parser.add_argument('--test_every', type=int, default=5, help='How often to test the model')
-    parser.add_argument('--save_every', type=int, default=500   , help='How often to save checkpoint')
+    parser.add_argument('--save_every', type=int, default=500, help='How often to save checkpoint')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint file')
-    parser.add_argument('--test_size', type=int, default=10, help='Number of samples in the test')
+    parser.add_argument('--test_size', type=int, default=100, help='Number of samples in the test')
 
     # Test Args
     parser.add_argument('--testing', type=bool, default=False, help='Will the network train or only perform a test')
