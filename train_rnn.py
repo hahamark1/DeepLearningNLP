@@ -36,7 +36,7 @@ def save_mistakes(output, labels, inputs, dl):
         for comment in comments:
             truth = 'positive' if comment[0] == 1 else 'negative'
             pred = 'positive' if comment[0] == 0 else 'negative'
-            wf.write('The following comment was predicted as {} but truely was {}. \n\n{}'.format(pred, truth, comment[1]))
+            wf.write('The following comment was predicted as {} but truely was {}. \n\n{}\n\n'.format(pred, truth, comment[1]))
     return
 
 
@@ -216,7 +216,6 @@ def main(config):
     limit = 20
     data_loader_filename = 'data/dataloader_{}.p'.format(limit)
 
-
     if os.path.isfile(data_loader_filename):
         with open(data_loader_filename, 'rb') as rf:
             dl = pickle.load(rf)
@@ -237,8 +236,6 @@ def main(config):
         evaluate(dl, config)
 
 if __name__ == "__main__":
-
-
     # Parse training configuration
     parser = argparse.ArgumentParser()
 
