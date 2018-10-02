@@ -74,8 +74,8 @@ class DataSet(object):
         self.y = y_shuffled
         self.y_score = y_score_shuffled
 
-        self.seq_size_words = self.max_sent_len + self.word_w_size - 1
-        self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
+        self.seq_size_words = self.max_sent_len + self.word_w_size
+        self.seq_size_chars = self.max_word_len + self.chr_w_size
 
         self.num_examples = len(comments)
         self.vocab_size_words = len(self.word2idx.keys()) + 1
@@ -88,8 +88,8 @@ class DataSet(object):
             self.vocab_size_char = len(self.char2idx.keys()) + 1
             self.max_sent_len = train_set.max_sent_len
             self.max_word_len = train_set.max_word_len
-            self.seq_size_words = self.max_sent_len + self.word_w_size - 1
-            self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
+            self.seq_size_words = self.max_sent_len + self.word_w_size
+            self.seq_size_chars = self.max_word_len + self.chr_w_size
 
     def next_batch(self, batch_size=4, padding=True, type='float'):
         """
