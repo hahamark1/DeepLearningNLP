@@ -215,10 +215,8 @@ def evaluate(dl, config):
 
 
 def main(config):
-<<<<<<< HEAD
     limit = 0
     data_loader_filename = '{}dataloader_twitter_{}.p'.format(config.data_path, limit)
-
     if os.path.isfile(data_loader_filename):
         with open(data_loader_filename, 'rb') as rf:
             dl = pickle.load(rf)
@@ -240,8 +238,6 @@ def main(config):
         evaluate(dl, config)
 
 if __name__ == "__main__":
-
-
     # Parse training configuration
     parser = argparse.ArgumentParser()
 
