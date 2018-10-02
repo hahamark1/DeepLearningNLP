@@ -3,17 +3,12 @@ import torch
 from src.DataSet import DataSet
 import csv
 
-DATA_PATH = 'data'
-TRAIN_DATA_PATH = '{}/train'.format(DATA_PATH)
-TEST_DATA_PATH = '{}/test'.format(DATA_PATH)
-TWITTER_PATH = '{}/train.txt'.format(DATA_PATH)
-
 COMMENTS = ['pos', 'neg']
 
 class DataLoader(object):
     """ Object that loads all formats from the datafolder to Python Object
     """
-    def __init__(self, limit=0, use_padding=True):
+    def __init__(self, limit=0, use_padding=True, data_path='data'):
         super(DataLoader, self).__init__()
 
         # The dicts below follow the format:
@@ -24,22 +19,40 @@ class DataLoader(object):
         self._limit = limit
         self.vocabulaire = []
         self._padding = use_padding
+        self.data_path = data_path
+
+        self.TRAIN_DATA_PATH = '{}/train'.format(self.data_path)
+        self.TEST_DATA_PATH = '{}/test'.format(self.data_path)
+        self.TWITTER_PATH = '{}/train.txt'.format(self.data_path)
 
     def load_twitter_comments(self):
-        comments = []
+        comments_train = []
+        comments_test = []
         line_count = 0
-        with open(TWITTER_PATH, 'r') as rf:
+        with open(self.TWITTER_PATH, 'r') as rf:
             file = rf.read().splitlines()
-            for row in file:
+            test_size = round(len(file) / 4)
+            for i, row in enumerate(file):
+                row = row.split('\t')
                 sentiment, comment = row[0], row[1]
+                if sentiment == '0':
+                    label = 'neg'
+                else:
+                    label = 'pos'
+
                 if line_count == 0:
                     line_count += 1
                 else:
-                    comments.append(comment)
-                    self.train_data.add_data(comment, sentiment, sentiment)
+                    if i < len(file) - test_size:
+                        self.train_data.add_data(comment, label, sentiment)
+                        comments_train.append(comment)
+                    else:
+                        self.test_data.add_data(comment, label, sentiment)
+                        comments_test.append(comment)
                     line_count += 1
         print('Now constructing')
-        self.train_data.construct_dataset(comments)
+        self.train_data.construct_dataset(comments_train)
+        self.test_data.construct_dataset(comments_test, self.train_data)
         print('Processed {} lines.'.format(line_count))
 
     def load_train_comments(self):
@@ -49,7 +62,7 @@ class DataLoader(object):
 
         comments = []
         for i, sentiment in enumerate(COMMENTS):
-            folder_path = '{}/{}'.format(TRAIN_DATA_PATH, sentiment)
+            folder_path = '{}/{}'.format(self.TRAIN_DATA_PATH, sentiment)
             for file in os.listdir(folder_path):
                 file_path = '{}/{}'.format(folder_path, file)
                 with open(file_path, 'r') as rf:
@@ -70,7 +83,7 @@ class DataLoader(object):
         comments = []
         i = 1
         for i, sentiment in enumerate(COMMENTS):
-            folder_path = '{}/{}'.format(TEST_DATA_PATH, sentiment)
+            folder_path = '{}/{}'.format(self.TEST_DATA_PATH, sentiment)
             for file in os.listdir(folder_path):
                 file_path = '{}/{}'.format(folder_path, file)
                 with open(file_path, 'r') as rf:
@@ -86,7 +99,7 @@ class DataLoader(object):
     def load_vocabulaire(self):
         """ Load the vocabulaire
         """
-        file_path = '{}/imdb.vocab'.format(DATA_PATH)
+        file_path = '{}/imdb.vocab'.format(self.DATA_PATH)
         with open(file_path, 'r') as rf:
             vocab = rf.read()
         self.vocabulaire = [word for word in vocab]
