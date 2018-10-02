@@ -140,7 +140,7 @@ def test(dl, step, model, test_size=1000):
     outputs = model(batch_inputs_words)
 
     # Calculate Loss: softmax --> cross entropy loss
-    label = batch_targets_label.type('torch.LongTensor').reshape(-1)
+    label = batch_targets_label.squeeze()
     loss = criterion(outputs, label)
     acc = calc_accuracy(outputs, label)
 
