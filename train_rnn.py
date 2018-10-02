@@ -264,7 +264,7 @@ if __name__ == "__main__":
 
     # Test Args
     parser.add_argument('--testing', type=bool, default=False, help='Will the network train or only perform a test')
-    parser.add_argument('--model_path', type=string, default=None, help='Path to the model to test')
+    parser.add_argument('--model_path', type=str, default=None, help='Path to the model to test')
 
     config = parser.parse_args()
 

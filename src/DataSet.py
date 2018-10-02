@@ -74,8 +74,8 @@ class DataSet(object):
         self.y = y_shuffled
         self.y_score = y_score_shuffled
 
-        self.seq_size_words = self.max_sent_len + self.word_w_size - 1
-        self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
+        self.seq_size_words = self.max_sent_len + self.word_w_size
+        self.seq_size_chars = self.max_word_len + self.chr_w_size
 
         self.num_examples = len(comments)
         self.vocab_size_words = len(self.word2idx.keys()) + 1
@@ -88,8 +88,8 @@ class DataSet(object):
             self.vocab_size_char = len(self.char2idx.keys()) + 1
             self.max_sent_len = train_set.max_sent_len
             self.max_word_len = train_set.max_word_len
-            self.seq_size_words = self.max_sent_len + self.word_w_size - 1
-            self.seq_size_chars = self.max_word_len + self.chr_w_size - 1
+            self.seq_size_words = max(self.seq_size_words , self.max_sent_len + self.word_w_size)
+            self.seq_size_chars = max(self.seq_size_chars, self.max_word_len + self.chr_w_size)
 
     def next_batch(self, batch_size=4, padding=True, type='float'):
         """
@@ -120,6 +120,9 @@ class DataSet(object):
                 char_mat = torch.zeros((self.seq_size_words, self.seq_size_chars)).type('torch.LongTensor')
 
                 for i in range(len(comment)):
+                    if i == self.seq_size_words:
+                        print("I cut of this sentence at {}".format(i))
+                        break
                     if comment[i] not in self.word2idx:
                         word_mat[int(self.word_w_size / 2) + i] = float(self.word2idx[UNK_TOKEN])
                     else:
