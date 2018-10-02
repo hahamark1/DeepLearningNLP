@@ -43,7 +43,7 @@ def train(dl, config):
     word_seq_size = dl.train_data.vocab_size_words + 1
     chr_seq_size = dl.train_data.vocab_size_char + 1
 
-    max_sentence_length = dl.train_data.next_batch(batch_size=1, padding=True, type='long')[0].shape[1]
+    max_sentence_length = max(dl.train_data.seq_size_words, dl.test_data.seq_size_words)
     model = ConvNet(word_seq_size, chr_seq_size, max_sentence_length)
 
     if torch.cuda.is_available():
@@ -86,9 +86,7 @@ def train(dl, config):
         acc = calc_accuracy(outputs, label)
 
         # niter = epoch*len(data_loader)+step
-        writer.add_scalar('accuracy', acc, index)
         writer.add_scalar('loss', loss.item(), index)
-
 
         # Getting gradients w.r.t. parameters
         loss.backward()
@@ -108,7 +106,8 @@ def train(dl, config):
             save_checkpoint(model, optimizer, config.checkpoint_path)
 
         if index % config.test_every == 0:
-            test(dl, index, model, test_size=config.test_size)
+            acc = test(dl, index, model, test_size=config.test_size)
+            writer.add_scalar('accuracy', acc, index)
 
 
 def test(dl, step, model, test_size=1000):
@@ -123,6 +122,7 @@ def test(dl, step, model, test_size=1000):
     if torch.cuda.is_available():
         batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
     # Forward pass to get output/logits
+
     outputs = model(batch_inputs_words, batch_inputs_chars)
 
     # Calculate Loss: softmax --> cross entropy loss
@@ -138,6 +138,8 @@ def test(dl, step, model, test_size=1000):
 
     print('Here the test results after {} steps.\n[{}]\t Loss {} \t Acc {} \t Examples/Sec = {:.2f}, pos_labels: {}, neg_labels: {}'.format(step, datetime.now().strftime("%Y-%m-%d %H:%M"),
                     loss.item(), acc, examples_per_second, torch.sum(label), len(label) - torch.sum(label)))
+
+    return acc
 
 def print_flags():
   """
@@ -217,6 +219,8 @@ def main(config):
         with open(data_loader_filename, 'wb') as wf:
             pickle.dump(dl, wf)
 
+    dl.train_data.seq_size_words = max(dl.train_data.seq_size_words, dl.test_data.seq_size_words)
+
     num_epochs = config.n_iters / (dl.train_data.num_examples / config.batch_size)
     num_epochs = int(num_epochs)
 
@@ -252,7 +256,7 @@ if __name__ == "__main__":
     # Misc params
     parser.add_argument('--summary_path', type=str, default="./summaries_dl4nlt/", help='Output path for summaries')
     parser.add_argument('--print_every', type=int, default=1, help='How often to print training progress')
-    parser.add_argument('--test_every', type=int, default=5, help='How often to test the model')
+    parser.add_argument('--test_every', type=int, default=1, help='How often to test the model')
     parser.add_argument('--save_every', type=int, default=500, help='How often to save checkpoint')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint file')
     parser.add_argument('--test_size', type=int, default=100, help='Number of samples in the test')
