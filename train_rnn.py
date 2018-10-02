@@ -91,7 +91,7 @@ def train(dl, config):
         outputs = model(batch_inputs_words)
 
         # Calculate Loss: softmax --> cross entropy loss
-        label = batch_targets_label.type('torch.LongTensor').reshape(-1)
+        label = batch_targets_label.squeeze()
         loss = criterion(outputs, label)
         total_loss += loss.item()
 
