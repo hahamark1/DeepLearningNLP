@@ -15,6 +15,7 @@ class DataLoader(object):
         # {Comment_ID: [comment, pos/neg, sentiment_score]}
         self.train_data = DataSet()
         self.test_data = DataSet()
+        self.val_data = DataSet()
         self.twitter_train_data = DataSet()
         self._limit = limit
         self.vocabulaire = []
@@ -28,10 +29,12 @@ class DataLoader(object):
     def load_twitter_comments(self):
         comments_train = []
         comments_test = []
+        comments_val = []
         line_count = 0
         with open(self.TWITTER_PATH, 'r') as rf:
             file = rf.read().splitlines()
-            test_size = round(len(file) / 4)
+            test_size = 0.6
+            val_size = 0.8
             for i, row in enumerate(file):
                 row = row.split('\t')
                 sentiment, comment = row[0], row[1]
@@ -43,9 +46,12 @@ class DataLoader(object):
                 if line_count == 0:
                     line_count += 1
                 else:
-                    if i < len(file) - test_size:
+                    if i < test_size * len(file):
                         self.train_data.add_data(comment, label, sentiment)
                         comments_train.append(comment)
+                    elif i < val_size * len(file):
+                        self.val_data.add_data(comment, label, sentiment)
+                        comments_val.append(comment)
                     else:
                         self.test_data.add_data(comment, label, sentiment)
                         comments_test.append(comment)
@@ -53,6 +59,7 @@ class DataLoader(object):
         print('Now constructing')
         self.train_data.construct_dataset(comments_train)
         self.test_data.construct_dataset(comments_test, self.train_data)
+        self.val_data.construct_dataset(comments_val, self.train_data)
         print('Processed {} lines.'.format(line_count))
 
     def load_train_comments(self):
