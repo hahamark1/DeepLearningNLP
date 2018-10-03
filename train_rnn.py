@@ -79,7 +79,7 @@ def train(dl, config):
         print('Starting on iteration {}'.format(index+1))
 
         # load new batch
-        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(config.batch_size)
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(config.batch_size, padding=True, type='long')
         # print(batch_inputs_words.shape)
         if torch.cuda.is_available():
             batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
@@ -131,7 +131,7 @@ def test(dl, step, model, test_size=1000):
     criterion = nn.CrossEntropyLoss()
     t1 = time.time()
     # load new batch
-    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.test_data.next_batch(test_size)
+    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.test_data.next_batch(test_size, padding=True, type='long')
 
     if torch.cuda.is_available():
         batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
@@ -228,13 +228,14 @@ def main(config):
         with open(data_loader_filename, 'wb') as wf:
             pickle.dump(dl, wf)
 
+    dl.train_data.seq_size_words = max(dl.train_data.seq_size_words, dl.test_data.seq_size_words)
+
     num_epochs = config.n_iters / (dl.train_data.num_examples / config.batch_size)
     num_epochs = int(num_epochs)
 
     if not config.testing:
         train(dl, config)
     else:
-        evaluate(dl, config)
         evaluate(dl, config)
 
 if __name__ == "__main__":
