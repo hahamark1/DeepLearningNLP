@@ -51,8 +51,8 @@ def train(dl, config):
     writer = SummaryWriter(config.summary_path)
 
     total_loss = 0
-    word_seq_size = dl.train_data.seq_size_words
-    chr_seq_size = dl.train_data.seq_size_chars
+    word_seq_size = dl.train_data.vocab_size_words + 1
+    chr_seq_size = dl.train_data.vocab_size_char + 1
 
     if config.use_LSTM:
         model = LSTMModel(word_seq_size, config.hidden_dim, config.num_layers, config.output_dim)
@@ -83,7 +83,7 @@ def train(dl, config):
         # print(batch_inputs_words.shape)
         if torch.cuda.is_available():
             batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
-        batch_inputs_words = batch_inputs_words.t().reshape(config.batch_size, word_seq_size, 1)
+        # batch_inputs_words = batch_inputs_words.t().reshape(config.batch_size, word_seq_size, 1)
 
         optimizer.zero_grad()
 
@@ -135,7 +135,7 @@ def test(dl, step, model, test_size=1000):
 
     if torch.cuda.is_available():
         batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
-    batch_inputs_words = batch_inputs_words.t().reshape(-1, word_seq_size, 1)
+    # batch_inputs_words = batch_inputs_words.t().reshape(-1, word_seq_size, 1)
     # Forward pass to get output/logits
     outputs = model(batch_inputs_words)
 
