@@ -51,13 +51,13 @@ def train(dl, config):
     writer = SummaryWriter(config.summary_path)
 
     total_loss = 0
-    word_seq_size = dl.train_data.vocab_size_words + 1
+    word_vocab_size = dl.train_data.vocab_size_words + 1
     chr_seq_size = dl.train_data.vocab_size_char + 1
 
     if config.use_LSTM:
-        model = LSTMModel(word_seq_size, config.hidden_dim, config.num_layers, config.output_dim)
+        model = LSTMModel(word_vocab_size, config.hidden_dim, config.num_layers, config.output_dim)
     else:
-        model = RNNModel(word_seq_size, config.hidden_dim, config.num_layers, config.output_dim)
+        model = RNNModel(word_vocab_size, config.batch_size, config.hidden_dim, config.num_layers, config.output_dim)
 
     if torch.cuda.is_available():
         model.cuda()
@@ -76,11 +76,12 @@ def train(dl, config):
 
     for index in range(config.n_iters):
         t1 = time.time()
-        print('Starting on iteration {}'.format(index+1))
+        #print('Starting on iteration {}'.format(index+1))
 
         # load new batch
-        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.train_data.next_batch(config.batch_size, padding=True, type='long')
-        # print(batch_inputs_words.shape)
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores, batch_lengths \
+            = dl.train_data.next_batch(config.batch_size, padding=True, type='long')
+
         if torch.cuda.is_available():
             batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
         # batch_inputs_words = batch_inputs_words.t().reshape(config.batch_size, word_seq_size, 1)
@@ -88,7 +89,7 @@ def train(dl, config):
         optimizer.zero_grad()
 
         # Forward pass to get output/logits
-        outputs = model(batch_inputs_words)
+        outputs = model(batch_inputs_words, batch_lengths)
 
         # Calculate Loss: softmax --> cross entropy loss
         label = batch_targets_label.squeeze()
@@ -113,7 +114,7 @@ def train(dl, config):
 
         if index % config.print_every == 0:
             print('[{}]\t Step {}\t Loss {} \t Examples/Sec = {:.2f},'.format(datetime.now().strftime("%Y-%m-%d %H:%M"),
-                            index, loss.item(), examples_per_second))
+                            index, total_loss/config.print_every, examples_per_second))
             total_loss = 0
 
         if index % config.save_every == 0:
@@ -131,13 +132,14 @@ def test(dl, step, model, test_size=1000):
     criterion = nn.CrossEntropyLoss()
     t1 = time.time()
     # load new batch
-    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.test_data.next_batch(test_size, padding=True, type='long')
+    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores, batch_lengths \
+        = dl.test_data.next_batch(test_size, padding=True, type='long')
 
     if torch.cuda.is_available():
         batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
     # batch_inputs_words = batch_inputs_words.t().reshape(-1, word_seq_size, 1)
     # Forward pass to get output/logits
-    outputs = model(batch_inputs_words)
+    outputs = model(batch_inputs_words, batch_lengths)
 
     # Calculate Loss: softmax --> cross entropy loss
     label = batch_targets_label.squeeze()
@@ -232,7 +234,6 @@ def main(config):
 
     num_epochs = config.n_iters / (dl.train_data.num_examples / config.batch_size)
     num_epochs = int(num_epochs)
-
     if not config.testing:
         train(dl, config)
     else:
@@ -245,7 +246,7 @@ if __name__ == "__main__":
     # Model params
     parser.add_argument('--use_LSTM', type=bool, default=False, help='To use an LSTM instead of RNN')
     parser.add_argument('--hidden_dim', type=int, default=20, help='Number of hidden units in the LSTM')
-    parser.add_argument('--num_layers', type=int, default=3, help='Number of stacked RNN/LSTM layers in the model')
+    parser.add_argument('--num_layers', type=int, default=1, help='Number of stacked RNN/LSTM layers in the model')
     parser.add_argument('--output_dim', type=int, default=2, help='Output dimension of the model')
     parser.add_argument('--input_dim', type=int, default=1, help='Input dimension of the model')
     parser.add_argument('--data_path', type=str, default='data')
@@ -254,14 +255,14 @@ if __name__ == "__main__":
     # Training params
     parser.add_argument('--use_padding', type=bool, default=False, help='To use padding on input sentences.')
     parser.add_argument('--batch_size', type=int, default=16, help='Number of examples to process in a batch')
-    parser.add_argument('--learning_rate', type=float, default=0.1, help='Learning rate')
+    parser.add_argument('--learning_rate', type=float, default=0.01, help='Learning rate')
     parser.add_argument('--num_epochs', type=int, default=25, help='Number of epochs')
     parser.add_argument('--n_iters', type=int, default=3000, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=5.0, help='--')
 
     # Misc params
     parser.add_argument('--summary_path', type=str, default="./summaries_dl4nlt/", help='Output path for summaries')
-    parser.add_argument('--print_every', type=int, default=1, help='How often to print training progress')
+    parser.add_argument('--print_every', type=int, default=10, help='How often to print training progress')
     parser.add_argument('--test_every', type=int, default=100, help='How often to test the model')
     parser.add_argument('--save_every', type=int, default=100, help='How often to save checkpoint')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint file')
