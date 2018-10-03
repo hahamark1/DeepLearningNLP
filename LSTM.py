@@ -38,7 +38,7 @@ class LSTMModel(nn.Module):
 
         # One time step
         x = self.embeddings(x)
-        out, (hn, cn) = self.lstm(x, (h0, c0))
+        out, (h0, c0) = self.lstm(x, (h0, c0))
 
         # Index hidden state of last time step
         # out.size() --> 100, 28, 100
