@@ -14,7 +14,7 @@ class RNNModel(nn.Module):
         # Building your RNN
         # batch_first=True causes input/output tensors to be of shape
         # (batch_dim, seq_dim, feature_dim)
-        self.embeddings = nn.Linear(1, dim_embedding)
+        self.embeddings = nn.Embedding(word_vocab_size, dim_embedding)
         self.rnn = nn.RNN(dim_embedding, hidden_dim, layer_dim, batch_first=True, nonlinearity='relu')
 
         # Readout layer
