@@ -137,7 +137,8 @@ def test(dl, step, model, test_size=1000):
         = dl.test_data.next_batch(test_size, padding=True, type='long')
 
     if torch.cuda.is_available():
-        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores, batch_lengths \
+            = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda(), batch_lengths.cuda()
     # batch_inputs_words = batch_inputs_words.t().reshape(-1, word_seq_size, 1)
     # Forward pass to get output/logits
     outputs = model(batch_inputs_words, batch_lengths)
