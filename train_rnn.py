@@ -55,7 +55,7 @@ def train(dl, config):
     chr_seq_size = dl.train_data.seq_size_chars
 
     if config.use_LSTM:
-        model = LSTMModel(input_dim, config.hidden_dim, config.num_layers, config.output_dim)
+        model = LSTMModel(word_seq_size, config.hidden_dim, config.num_layers, config.output_dim)
     else:
         model = RNNModel(word_seq_size, config.hidden_dim, config.num_layers, config.output_dim)
 
@@ -91,7 +91,7 @@ def train(dl, config):
         outputs = model(batch_inputs_words)
 
         # Calculate Loss: softmax --> cross entropy loss
-        label = batch_targets_label.type('torch.LongTensor').reshape(-1)
+        label = batch_targets_label.squeeze()
         loss = criterion(outputs, label)
         total_loss += loss.item()
 
@@ -113,14 +113,15 @@ def train(dl, config):
 
         if index % config.print_every == 0:
             print('[{}]\t Step {}\t Loss {} \t Examples/Sec = {:.2f},'.format(datetime.now().strftime("%Y-%m-%d %H:%M"),
-                            index, total_loss, examples_per_second))
+                            index, loss.item(), examples_per_second))
             total_loss = 0
 
         if index % config.save_every == 0:
-            save_checkpoint(model, optimizer)
+            save_checkpoint(model, optimizer, config.checkpoint_path)
 
         if index % config.test_every == 0:
-            test(dl, index, model, config.test_size)
+            test_acc = test(dl, index, model, test_size=config.test_size)
+            writer.add_scalar('test_accuracy', test_acc, index)
 
 
 def test(dl, step, model, test_size=1000):
@@ -139,7 +140,7 @@ def test(dl, step, model, test_size=1000):
     outputs = model(batch_inputs_words)
 
     # Calculate Loss: softmax --> cross entropy loss
-    label = batch_targets_label.type('torch.LongTensor').reshape(-1)
+    label = batch_targets_label.squeeze()
     loss = criterion(outputs, label)
     acc = calc_accuracy(outputs, label)
 
@@ -148,6 +149,7 @@ def test(dl, step, model, test_size=1000):
 
     print('Here the test results after {} steps.\n[{}]\t Loss {} \t Acc {} \t Examples/Sec = {:.2f},'.format(step, datetime.now().strftime("%Y-%m-%d %H:%M"),
                     loss.item(), acc, examples_per_second))
+    return acc
 
 def print_flags():
   """
@@ -179,7 +181,7 @@ def evaluate(dl, config):
     chr_seq_size = dl.train_data.seq_size_chars
 
     if config.use_LSTM:
-        model = LSTMModel(input_dim, config.hidden_dim, config.num_layers, config.output_dim)
+        model = LSTMModel(word_seq_size, config.hidden_dim, config.num_layers, config.output_dim)
     else:
         model = RNNModel(word_seq_size, config.hidden_dim, config.num_layers, config.output_dim)
 
@@ -213,17 +215,16 @@ def evaluate(dl, config):
 
 
 def main(config):
-    limit = 20
-    data_loader_filename = 'data/dataloader_{}.p'.format(limit)
-
+    limit = 0
+    data_loader_filename = '{}dataloader_twitter_{}.p'.format(config.data_path, limit)
     if os.path.isfile(data_loader_filename):
         with open(data_loader_filename, 'rb') as rf:
             dl = pickle.load(rf)
     else:
-        dl = DataLoader(limit=limit)
-        dl.load_train_comments()
-        dl.load_test_comments(dl.train_data)
+        dl = DataLoader(limit=limit, data_path=config.data_path)
         dl.load_twitter_comments()
+        # dl.load_train_comments()
+        # dl.load_test_comments(dl.train_data)
         with open(data_loader_filename, 'wb') as wf:
             pickle.dump(dl, wf)
 
@@ -233,6 +234,7 @@ def main(config):
     if not config.testing:
         train(dl, config)
     else:
+        evaluate(dl, config)
         evaluate(dl, config)
 
 if __name__ == "__main__":
@@ -245,6 +247,8 @@ if __name__ == "__main__":
     parser.add_argument('--num_layers', type=int, default=3, help='Number of stacked RNN/LSTM layers in the model')
     parser.add_argument('--output_dim', type=int, default=2, help='Output dimension of the model')
     parser.add_argument('--input_dim', type=int, default=1, help='Input dimension of the model')
+    parser.add_argument('--data_path', type=str, default='data')
+    parser.add_argument('--checkpoint_path', type=str, default='checkpoints_dl4nlt')
 
     # Training params
     parser.add_argument('--use_padding', type=bool, default=False, help='To use padding on input sentences.')
@@ -256,7 +260,7 @@ if __name__ == "__main__":
 
     # Misc params
     parser.add_argument('--summary_path', type=str, default="./summaries_dl4nlt/", help='Output path for summaries')
-    parser.add_argument('--print_every', type=int, default=100, help='How often to print training progress')
+    parser.add_argument('--print_every', type=int, default=1, help='How often to print training progress')
     parser.add_argument('--test_every', type=int, default=100, help='How often to test the model')
     parser.add_argument('--save_every', type=int, default=100, help='How often to save checkpoint')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint file')

@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 
 class LSTMModel(nn.Module):
     def __init__(self, word_vocab_size, hidden_dim, layer_dim, output_dim, dim_embedding=512):
@@ -25,15 +26,15 @@ class LSTMModel(nn.Module):
         #######################
         # x = self.embedding(x)
         if torch.cuda.is_available():
-            h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).cuda())
+            h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).cuda()
         else:
-            h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
+            h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
 
         # Initialize cell state
         if torch.cuda.is_available():
-            c0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).cuda())
+            c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).cuda()
         else:
-            c0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
+            c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
 
         # One time step
         x = self.embeddings(x)
