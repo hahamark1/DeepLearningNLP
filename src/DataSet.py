@@ -17,6 +17,7 @@ class DataSet(object):
         self.max_word_len = 0
         self.word2idx = {}
         self.char2idx = {}
+        self.idx2word = {}
         self.word_idx = 1
         self.char_idx = 1
         self.word_w_size = 5
@@ -41,6 +42,7 @@ class DataSet(object):
         for token in comment:
             if token not in self.word2idx:
                 self.word2idx[token] = self.word_idx
+                self.idx2word[self.word_idx] = token
                 self.word_idx += 1
                 self.max_word_len = max(self.max_word_len, len(token))
             for i in range(len(token)):

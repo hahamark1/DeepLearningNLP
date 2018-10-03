@@ -14,18 +14,23 @@ import nltk
 nltk.download('punkt')
 from tensorboardX import SummaryWriter
 
-def save_mistakes(output, labels, inputs, dl):
+def save_mistakes(output, labels, input_words, dl):
     predictions = torch.argmax(output,dim=1)
-    correct_predictions = torch.eq(predictions, batch_targets)
+    correct_predictions = torch.eq(predictions, labels)
 
-    mistakes_indices = torch.where(correct_predictions == 0)
-    comments = [(dl.train_data.word2idx[idx], batch_targets[index]) for index in mistakes_indices for idx in inputs[index] if idx != 0]
+    mistakes_indices = correct_predictions == 0
+    comments = []
+    dl.train_data.idx2word[len(dl.train_data.idx2word) + 1] = "UNKNOWN_WORD"
+    for i, mistake in enumerate(mistakes_indices):
+        if mistake == True:
+            comment = ' '.join([dl.train_data.idx2word[int(idx)] for idx in input_words[i] if idx != 0])
+            comments.append((comment, labels[i]))
 
     with open('mistaken_comments.txt', 'w') as wf:
         for comment in comments:
-            truth = 'positive' if comment[0] == 1 else 'negative'
-            pred = 'positive' if comment[0] == 0 else 'negative'
-            wf.write('The following comment was predicted as {} but truely was {}. \n\n{}'.format(pred, truth, comment[1]))
+            truth = 'positive' if comment[1] == 1 else 'negative'
+            pred = 'positive' if comment[1] == 0 else 'negative'
+            wf.write('The following comment was predicted as {} but truely was {}. \n{}'.format(pred, truth, comment[0] + "\n\n"))
     return
 
 
@@ -42,8 +47,7 @@ def train(dl, config):
     total_loss = 0
     word_seq_size = dl.train_data.vocab_size_words + 1
     chr_seq_size = dl.train_data.vocab_size_char + 1
-
-    max_sentence_length = max(dl.train_data.seq_size_words, dl.test_data.seq_size_words)
+    max_sentence_length = max(dl.train_data.seq_size_words, dl.test_data.seq_size_words, dl.val_data.seq_size_words)
     model = ConvNet(word_seq_size, chr_seq_size, max_sentence_length)
 
     if torch.cuda.is_available():
@@ -60,6 +64,7 @@ def train(dl, config):
         epoch = checkpoint['epoch']
         print("Checkpoint loaded")
 
+    best_acc = [0]
     for index in range(config.n_iters):
         t1 = time.time()
         print('Starting on iteration {}'.format(index+1))
@@ -85,6 +90,7 @@ def train(dl, config):
 
         acc = calc_accuracy(outputs, label)
 
+
         # niter = epoch*len(data_loader)+step
         writer.add_scalar('loss', loss.item(), index)
 
@@ -102,27 +108,38 @@ def train(dl, config):
                             index, total_loss, examples_per_second))
             total_loss = 0
 
-        if index % config.save_every == 0:
-            save_checkpoint(model, optimizer, config.checkpoint_path)
+        # if index % config.save_every == 0:
+        #     save_checkpoint(model, optimizer, config.checkpoint_path)
 
         if index % config.test_every == 0:
-            loss, acc = test(dl, index, model, test_size=config.test_size)
+            loss, acc = test(dl, index, model, test_size=500)
             writer.add_scalar('accuracy', acc, index)
+            # Saving the best model
+            if acc > max(best_acc):
+                torch.save(model, 'best_model.pt')
+            best_acc.append(acc)
 
 
-def test(dl, step, model, test_size=1000):
+def test(dl, step, model, test_size=1000, validation=False):
     word_seq_size = dl.test_data.seq_size_words
     chr_seq_size = dl.train_data.seq_size_chars
+    max_sen_len = max(dl.train_data.seq_size_words, dl.test_data.seq_size_words, dl.val_data.seq_size_words)
+    dl.val_data.seq_size_words = max_sen_len
+    if validation == True:
+        model = torch.load('best_model.pt')
 
     criterion = nn.CrossEntropyLoss()
     t1 = time.time()
     # load new batch
-    batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.test_data.next_batch(test_size, padding=True, type='long')
-
+    if validation == False:
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.test_data.next_batch(test_size, padding=True, type='long')
+    else:
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = dl.val_data.next_batch(test_size, padding=True, type='long')
+    
     if torch.cuda.is_available():
         batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
-    # Forward pass to get output/logits
 
+    # Forward pass to get output/logits
     outputs = model(batch_inputs_words, batch_inputs_chars)
 
     # Calculate Loss: softmax --> cross entropy loss
@@ -130,6 +147,9 @@ def test(dl, step, model, test_size=1000):
         label = batch_targets_label.type('torch.cuda.LongTensor').squeeze()
     else:
         label = batch_targets_label.type('torch.LongTensor').squeeze()
+    if validation == True:
+        save_mistakes(outputs, label, batch_inputs_words, dl)
+
     loss = criterion(outputs, label)
     acc = calc_accuracy(outputs, label)
 
@@ -194,7 +214,7 @@ def evaluate(dl, config):
     label = batch_targets_label.type('torch.LongTensor').reshape(-1)
     acc = calc_accuracy(outputs, label)
 
-    save_mistakes(outputs, label, batch_inputs_words)
+    save_mistakes(outputs, label, dl)
 
     t2 = time.time()
     examples_per_second = config.batch_size/float(t2-t1)
@@ -225,7 +245,11 @@ def main(config):
     num_epochs = int(num_epochs)
 
     if not config.testing:
-        train(dl, config)
+        # train(dl, config)
+        loss, acc = test(dl, 0, 0, test_size=500, validation=True)
+        print("The accuracy on the validation set is: ", acc)
+
+
     else:
         evaluate(dl, config)
 
@@ -248,15 +272,15 @@ if __name__ == "__main__":
     # Training params
     parser.add_argument('--use_padding', type=bool, default=False, help='To use padding on input sentences.')
     parser.add_argument('--batch_size', type=int, default=64, help='Number of examples to process in a batch')
-    parser.add_argument('--learning_rate', type=float, default=0.01, help='Learning rate')
+    parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--num_epochs', type=int, default=25, help='Number of epochs')
-    parser.add_argument('--n_iters', type=int, default=3000, help='Number of training steps')
+    parser.add_argument('--n_iters', type=int, default=5, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=5.0, help='--')
 
     # Misc params
     parser.add_argument('--summary_path', type=str, default="./summaries_dl4nlt/", help='Output path for summaries')
     parser.add_argument('--print_every', type=int, default=1, help='How often to print training progress')
-    parser.add_argument('--test_every', type=int, default=1, help='How often to test the model')
+    parser.add_argument('--test_every', type=int, default=2, help='How often to test the model')
     parser.add_argument('--save_every', type=int, default=500, help='How often to save checkpoint')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint file')
     parser.add_argument('--test_size', type=int, default=100, help='Number of samples in the test')
