@@ -19,7 +19,7 @@ class LSTMModel(nn.Module):
         # Readout layer
         self.fc = nn.Linear(hidden_dim, output_dim)
 
-    def forward(self, x):
+    def forward(self, x, lengths):
         # Initialize hidden state with zeros
         #######################
         #  USE GPU FOR MODEL  #
@@ -42,6 +42,7 @@ class LSTMModel(nn.Module):
 
         # Index hidden state of last time step
         # out.size() --> 100, 28, 100
-        out = self.fc(out[:, -1, :])
+        final_out = out.gather(1, lengths.view(-1, 1, 1).expand(out.size(0), 1, out.size(2)))
+        out = self.fc(final_out).squeeze(1)
         # out.size() --> 100, 2
         return out

@@ -244,7 +244,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Model params
-    parser.add_argument('--use_LSTM', type=bool, default=False, help='To use an LSTM instead of RNN')
+    parser.add_argument('--use_LSTM', type=bool, default=True, help='To use an LSTM instead of RNN')
     parser.add_argument('--hidden_dim', type=int, default=20, help='Number of hidden units in the LSTM')
     parser.add_argument('--num_layers', type=int, default=1, help='Number of stacked RNN/LSTM layers in the model')
     parser.add_argument('--output_dim', type=int, default=2, help='Output dimension of the model')
