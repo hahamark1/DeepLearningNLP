@@ -1,5 +1,5 @@
 #!/bin/sh
-#PBS -lwalltime=48:00:00
+#PBS -lwalltime=4:00:00
 #PBS -lnodes=1:ppn=12
 #PBS -lmem=250GB
 
