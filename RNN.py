@@ -27,7 +27,7 @@ class RNNModel(nn.Module):
         #  USE GPU FOR MODEL  #
         #######################
         if torch.cuda.is_available():
-            h0 = torch.zeros(self.layer_dim, self.batch_size, self.hidden_dim).cuda()
+            h0 = torch.zeros(self.layer_dim, self.hidden_dim).cuda()
         else:
             h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
         # One time step
