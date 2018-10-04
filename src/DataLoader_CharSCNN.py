@@ -1,7 +1,6 @@
 import os
 import torch
 from src.DataSet import DataSet
-import csv
 
 COMMENTS = ['pos', 'neg']
 
@@ -27,6 +26,8 @@ class DataLoader(object):
         self.TWITTER_PATH = '{}/train.txt'.format(self.data_path)
 
     def load_twitter_comments(self):
+        """ Load the data from the Twitter Sentiment Dataset
+        """
         comments_train = []
         comments_test = []
         comments_val = []
@@ -113,6 +114,4 @@ class DataLoader(object):
 
 
 if __name__ == '__main__':
-    dl = DataLoader()
-    dl.load_train_comments()
-    print(torch.stack(dl_train_data.x_chr))
+    print('Please run the bash scripts or train_*.py files!')

@@ -155,3 +155,6 @@ class DataSet(object):
 
         return self.x_wrd, self.x_chr, self.y_out[start:end], self.y_score_out[start:end], \
                 self.lengths
+
+if __name__ == '__main__':
+    print('Please run the bash scripts or train_*.py files!')

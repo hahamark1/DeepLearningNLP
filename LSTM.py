@@ -4,45 +4,33 @@ import torch
 class LSTMModel(nn.Module):
     def __init__(self, word_vocab_size, hidden_dim, layer_dim, output_dim, dim_embedding=512):
         super(LSTMModel, self).__init__()
-        # Hidden dimensions
+
         self.hidden_dim = hidden_dim
-
-        # Number of hidden layers
         self.layer_dim = layer_dim
-
-        # Building your RNN
-        # batch_first=True causes input/output tensors to be of shape
-        # (batch_dim, seq_dim, feature_dim)
         self.embeddings = nn.Embedding(word_vocab_size, dim_embedding, padding_idx = 0)
         self.lstm = nn.LSTM(dim_embedding, hidden_dim, layer_dim, batch_first=True)
-
-        # Readout layer
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x, lengths):
         # Initialize hidden state with zeros
-        #######################
-        #  USE GPU FOR MODEL  #
-        #######################
-        # x = self.embedding(x)
         if torch.cuda.is_available():
             h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).cuda()
         else:
             h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
-
         # Initialize cell state
         if torch.cuda.is_available():
             c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).cuda()
         else:
             c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
-
-        # One time step
-        x = self.embeddings(x)
-        out, (h0, c0) = self.lstm(x, (h0, c0))
-
-        # Index hidden state of last time step
-        # out.size() --> 100, 28, 100
+        # Embed the inputs
+        input = self.embeddings(x)
+        # Run the whole sequence through the lstm cell
+        out, (h0, c0) = self.lstm(input, (h0, c0))
+        # Reshape the output so its ready for the fully connected layer
         final_out = out.gather(1, lengths.view(-1, 1, 1).expand(out.size(0), 1, out.size(2)))
+        # Run the output through the fully connected layer to get the final prediction
         out = self.fc(final_out).squeeze(1)
-        # out.size() --> 100, 2
         return out
+
+if __name__ == '__main__':
+    print('Please run the bash scripts or train_*.py files!')

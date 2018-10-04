@@ -1,4 +1,6 @@
 data/*
+summaries_dl4nlt/*
+
 !data/.gitkeep
 .idea/*
 
@@ -10,4 +12,4 @@ data/*
 *.nl
 *.pyc
 
-!data/twitter_sentiment.csv
+!data/train.txt

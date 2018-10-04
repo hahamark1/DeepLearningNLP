@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 class ConvNet(nn.Module):
     def __init__(self, word_vocab_size, chr_vocab_size, max_sentence_length, dim_embedding=128):
@@ -16,7 +15,7 @@ class ConvNet(nn.Module):
         self.linear_1 = nn.Linear(2*dim_embedding, 4*dim_embedding)
         self.linear_2 = nn.Linear(4*dim_embedding, 2)
 
-    def forward(self, words, words_in_char, sentence_vector=0):
+    def forward(self, words, words_in_char):
         # Create word embeddings
         vector_wrds = self.word_embedding(words)
 
@@ -25,15 +24,15 @@ class ConvNet(nn.Module):
         word_wchs = self.conv_chr(vector_wchs)
         word_wchs, _ = torch.max(word_wchs, 2)
 
-        # word_wchs = []
-        # for i in range(vector_wchs.shape[1]):
-        #     word_matrix = vector_wchs[:, i, :, :]
-        #     word_matrix = word_matrix.permute(0, 2, 1)
-        #     word_matrix_conv = self.conv_chr(word_matrix)
-        #     word_wch, _ = torch.max(word_matrix_conv, 2)
-        #     word_wchs.append(word_wch)
-        # word_wchs = torch.stack(word_wchs)
-        # word_wchs = word_wchs.permute(1, 0, 2)
+        word_wchs = []
+        for i in range(vector_wchs.shape[1]):
+            word_matrix = vector_wchs[:, i, :, :]
+            word_matrix = word_matrix.permute(0, 2, 1)
+            word_matrix_conv = self.conv_chr(word_matrix)
+            word_wch, _ = torch.max(word_matrix_conv, 2)
+            word_wchs.append(word_wch)
+        word_wchs = torch.stack(word_wchs)
+        word_wchs = word_wchs.permute(1, 0, 2)
 
         # Combine word and character word embeddings
         u = torch.cat((vector_wrds, word_wchs), 2)
@@ -46,3 +45,6 @@ class ConvNet(nn.Module):
         out = self.linear_2(out)
 
         return out
+
+if __name__ == '__main__':
+    print('Please run the bash scripts or train_*.py files!')
