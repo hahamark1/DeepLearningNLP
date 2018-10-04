@@ -54,6 +54,8 @@ def train(dl, config):
     word_vocab_size = dl.train_data.vocab_size_words + 1
     chr_seq_size = dl.train_data.vocab_size_char + 1
 
+    print(bool(config.use_LSTM))
+
     if config.use_LSTM:
         model = LSTMModel(word_vocab_size, config.hidden_dim, config.num_layers, config.output_dim)
     else:
@@ -246,7 +248,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Model params
-    parser.add_argument('--use_LSTM', type=bool, default=True, help='To use an LSTM instead of RNN')
+    parser.add_argument('--use_LSTM', type=int, default=0, help='To use an LSTM instead of RNN')
     parser.add_argument('--hidden_dim', type=int, default=20, help='Number of hidden units in the LSTM')
     parser.add_argument('--num_layers', type=int, default=1, help='Number of stacked RNN/LSTM layers in the model')
     parser.add_argument('--output_dim', type=int, default=2, help='Output dimension of the model')
@@ -255,7 +257,7 @@ if __name__ == "__main__":
     parser.add_argument('--checkpoint_path', type=str, default='checkpoints_dl4nlt')
 
     # Training params
-    parser.add_argument('--use_padding', type=bool, default=False, help='To use padding on input sentences.')
+    parser.add_argument('--use_padding', type=int, default=0, help='To use padding on input sentences.')
     parser.add_argument('--batch_size', type=int, default=16, help='Number of examples to process in a batch')
     parser.add_argument('--learning_rate', type=float, default=0.01, help='Learning rate')
     parser.add_argument('--num_epochs', type=int, default=25, help='Number of epochs')
@@ -271,7 +273,7 @@ if __name__ == "__main__":
     parser.add_argument('--test_size', type=int, default=1000, help='Number of samples in the test')
 
     # Test Args
-    parser.add_argument('--testing', type=bool, default=False, help='Will the network train or only perform a test')
+    parser.add_argument('--testing', type=int, default=0, help='Will the network train or only perform a test')
     parser.add_argument('--model_path', type=str, default=None, help='Path to the model to test')
 
     config = parser.parse_args()
