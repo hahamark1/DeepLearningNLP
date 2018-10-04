@@ -19,18 +19,47 @@ def save_mistakes(output, labels, input_words, dl):
     correct_predictions = torch.eq(predictions, labels)
 
     mistakes_indices = correct_predictions == 0
-    comments = []
+    wrong_comments = []
+    correct_comments = []
     dl.train_data.idx2word[len(dl.train_data.idx2word) + 1] = "UNKNOWN_WORD"
     for i, mistake in enumerate(mistakes_indices):
         if mistake == True:
             comment = ' '.join([dl.train_data.idx2word[int(idx)] for idx in input_words[i] if idx != 0])
-            comments.append((comment, labels[i]))
-
+            wrong_comments.append((comment, labels[i]))
+        else:
+            comment = ' '.join([dl.train_data.idx2word[int(idx)] for idx in input_words[i] if idx != 0])
+            correct_comments.append((comment, labels[i]))
     with open('mistaken_comments.txt', 'w') as wf:
-        for comment in comments:
+        for comment in wrong_comments:
             truth = 'positive' if comment[1] == 1 else 'negative'
             pred = 'positive' if comment[1] == 0 else 'negative'
             wf.write('The following comment was predicted as {} but truely was {}. \n{}'.format(pred, truth, comment[0] + "\n\n"))
+    
+    with open('correctly_comments.txt', 'w') as wf:
+        for comment in correct_comments:
+            pred = 'positive' if comment[1] == 1 else 'negative'
+            wf.write('The following comment was correctly predicted as {}  \n{}'.format(pred, comment[0] + "\n\n"))
+    TP = 0
+    TN = 0
+    FP = 0
+    FN = 0
+    for index in range(len(predictions)):
+        if predictions[index] == 1 and labels[index] == 1:
+            TP += 1
+        elif predictions[index] == 0 and labels[index] == 0:
+            TN += 1
+        elif predictions[index] == 0 and labels[index] == 1:
+            FN += 1
+        else:
+            FP += 1
+    print("Number of true positives: ", TP)
+    print("Number of true negatives: ", TN)
+    print("Number of false negatives: ", FN)
+    print("Number of false positives: ", FP)
+    print("Precision for Positive is: ", TP/(TP + FP))
+    print("Recall for Positive is: ", TP/(TP + FN))
+    print("Precision for negative is: ", TN/(TN + FN))
+    print("Recall for negative is: ", TN/(TN + FP))
     return
 
 
@@ -56,13 +85,13 @@ def train(dl, config):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate, momentum=0.9)
 
-    # Load checkpoint
-    if config.checkpoint:
-        checkpoint = torch.load(config.checkpoint)
-        model.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        epoch = checkpoint['epoch']
-        print("Checkpoint loaded")
+    # # Load checkpoint
+    # if config.checkpoint:
+    #     checkpoint = torch.load(config.checkpoint)
+    #     model.load_state_dict(checkpoint['model'])
+    #     optimizer.load_state_dict(checkpoint['optimizer'])
+    #     epoch = checkpoint['epoch']
+    #     print("Checkpoint loaded")
 
     best_acc = [0]
     for index in range(config.n_iters):
@@ -245,7 +274,7 @@ def main(config):
     num_epochs = int(num_epochs)
 
     if not config.testing:
-        # train(dl, config)
+        train(dl, config)
         loss, acc = test(dl, 0, 0, test_size=500, validation=True)
         print("The accuracy on the validation set is: ", acc)
 
@@ -272,15 +301,15 @@ if __name__ == "__main__":
     # Training params
     parser.add_argument('--use_padding', type=bool, default=False, help='To use padding on input sentences.')
     parser.add_argument('--batch_size', type=int, default=64, help='Number of examples to process in a batch')
-    parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--learning_rate', type=float, default=0.008, help='Learning rate')
     parser.add_argument('--num_epochs', type=int, default=25, help='Number of epochs')
-    parser.add_argument('--n_iters', type=int, default=5, help='Number of training steps')
+    parser.add_argument('--n_iters', type=int, default=9000, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=5.0, help='--')
 
     # Misc params
     parser.add_argument('--summary_path', type=str, default="./summaries_dl4nlt/", help='Output path for summaries')
-    parser.add_argument('--print_every', type=int, default=1, help='How often to print training progress')
-    parser.add_argument('--test_every', type=int, default=2, help='How often to test the model')
+    parser.add_argument('--print_every', type=int, default=100, help='How often to print training progress')
+    parser.add_argument('--test_every', type=int, default=200, help='How often to test the model')
     parser.add_argument('--save_every', type=int, default=500, help='How often to save checkpoint')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint file')
     parser.add_argument('--test_size', type=int, default=100, help='Number of samples in the test')
