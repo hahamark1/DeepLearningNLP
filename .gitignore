@@ -1,6 +1,12 @@
 data/*
 summaries_dl4nlt/*
 
+__pycache__/*
+checkpoints_dl4nlt/*
+src/__pycache__/*
+.DS*
+
+
 !data/.gitkeep
 .idea/*
 
