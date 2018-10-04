@@ -3,14 +3,13 @@ import torch
 from torch.autograd import Variable
 
 class RNNModel(nn.Module):
-    def __init__(self, word_vocab_size, batch_size, hidden_dim, layer_dim, output_dim, dim_embedding=512):
+    def __init__(self, word_vocab_size, hidden_dim, layer_dim, output_dim, dim_embedding=512):
         super(RNNModel, self).__init__()
         # Hidden dimensions
         self.hidden_dim = hidden_dim
         # .type(torch.LongTensor)
         # Number of hidden layers
         self.layer_dim = layer_dim
-        self.batch_size = batch_size
 
         # Building your RNN
         # batch_first=True causes input/output tensors to be of shape

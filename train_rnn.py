@@ -59,7 +59,7 @@ def train(dl, config):
     if config.use_LSTM:
         model = LSTMModel(word_vocab_size, config.hidden_dim, config.num_layers, config.output_dim)
     else:
-        model = RNNModel(word_vocab_size, config.batch_size, config.hidden_dim, config.num_layers, config.output_dim)
+        model = RNNModel(word_vocab_size, config.hidden_dim, config.num_layers, config.output_dim)
 
     if torch.cuda.is_available():
         model.cuda()
