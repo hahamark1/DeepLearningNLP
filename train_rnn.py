@@ -25,18 +25,54 @@ nltk.download('punkt')
 from nltk.tokenize import word_tokenize, sent_tokenize
 from tensorboardX import SummaryWriter
 
-def save_mistakes(output, labels, inputs, dl):
-    predictions = torch.argmax(output,dim=1)
-    correct_predictions = torch.eq(predictions, batch_targets)
 
-    mistakes_indices = torch.where(correct_predictions == 0)
-    comments = [(dl.train_data.word2idx[idx], batch_targets[index]) for index in mistakes_indices for idx in inputs[index] if idx != 0]
+def save_mistakes(output, labels, input_words, dl):
+    predictions = torch.argmax(output, dim=1)
+    correct_predictions = torch.eq(predictions, labels)
 
+    mistakes_indices = correct_predictions == 0
+    wrong_comments = []
+    correct_comments = []
+    dl.train_data.idx2word[len(dl.train_data.idx2word) + 1] = "UNKNOWN_WORD"
+    for i, mistake in enumerate(mistakes_indices):
+        if mistake == True:
+            comment = ' '.join([dl.train_data.idx2word[int(idx)] for idx in input_words[i] if idx != 0])
+            wrong_comments.append((comment, labels[i]))
+        else:
+            comment = ' '.join([dl.train_data.idx2word[int(idx)] for idx in input_words[i] if idx != 0])
+            correct_comments.append((comment, labels[i]))
     with open('mistaken_comments.txt', 'w') as wf:
-        for comment in comments:
-            truth = 'positive' if comment[0] == 1 else 'negative'
-            pred = 'positive' if comment[0] == 0 else 'negative'
-            wf.write('The following comment was predicted as {} but truely was {}. \n\n{}\n\n'.format(pred, truth, comment[1]))
+        for comment in wrong_comments:
+            truth = 'positive' if comment[1] == 1 else 'negative'
+            pred = 'positive' if comment[1] == 0 else 'negative'
+            wf.write('The following comment was predicted as {} but truely was {}. \n{}'.format(pred, truth,
+                                                                                                comment[0] + "\n\n"))
+
+    with open('correctly_comments.txt', 'w') as wf:
+        for comment in correct_comments:
+            pred = 'positive' if comment[1] == 1 else 'negative'
+            wf.write('The following comment was correctly predicted as {}  \n{}'.format(pred, comment[0] + "\n\n"))
+    TP = 0
+    TN = 0
+    FP = 0
+    FN = 0
+    for index in range(len(predictions)):
+        if predictions[index] == 1 and labels[index] == 1:
+            TP += 1
+        elif predictions[index] == 0 and labels[index] == 0:
+            TN += 1
+        elif predictions[index] == 0 and labels[index] == 1:
+            FN += 1
+        else:
+            FP += 1
+    print("Number of true positives: ", TP)
+    print("Number of true negatives: ", TN)
+    print("Number of false negatives: ", FN)
+    print("Number of false positives: ", FP)
+    print("Precision for Positive is: ", TP / (TP + FP))
+    print("Recall for Positive is: ", TP / (TP + FN))
+    print("Precision for negative is: ", TN / (TN + FN))
+    print("Recall for negative is: ", TN / (TN + FP))
     return
 
 
@@ -72,7 +108,7 @@ def train(dl, config):
         checkpoint = torch.load(config.checkpoint)
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        epoch = checkpoint['epoch']
+        # epoch = checkpoint['epoch']
         print("Checkpoint loaded")
 
 
@@ -219,6 +255,60 @@ def evaluate(dl, config):
                      acc, examples_per_second))
 
 
+def test_eval(dl, step, model, test_size=1000, validation=False, config=None, optimizer=None):
+    word_seq_size = dl.test_data.seq_size_words
+    chr_seq_size = dl.train_data.seq_size_chars
+    max_sen_len = max(dl.train_data.seq_size_words, dl.test_data.seq_size_words, dl.val_data.seq_size_words)
+    dl.val_data.seq_size_words = max_sen_len
+    if validation == True:
+        # # Load checkpoint
+        if config.checkpoint:
+            checkpoint = torch.load(config.checkpoint)
+            model.load_state_dict(checkpoint['model'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            # epoch = checkpoint['epoch']
+            print("Checkpoint loaded")
+        else:
+            print("No checkpoint supplied!")
+
+    criterion = nn.CrossEntropyLoss()
+    t1 = time.time()
+    # load new batch
+    if validation == False:
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores, batch_lengths = dl.test_data.next_batch(
+            test_size, padding=True, type='long')
+    else:
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores, batch_lengths = dl.val_data.next_batch(
+            test_size, padding=True, type='long')
+
+    if torch.cuda.is_available():
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores, batch_lengths = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
+
+    # Forward pass to get output/logits
+    outputs = model(batch_inputs_words, batch_lengths)
+
+    # Calculate Loss: softmax --> cross entropy loss
+    if torch.cuda.is_available():
+        label = batch_targets_label.type('torch.cuda.LongTensor').squeeze()
+    else:
+        label = batch_targets_label.type('torch.LongTensor').squeeze()
+    if validation == True:
+        save_mistakes(outputs, label, batch_inputs_words, dl)
+
+    loss = criterion(outputs, label)
+    acc = calc_accuracy(outputs, label)
+
+    t2 = time.time()
+    examples_per_second = config.batch_size / float(t2 - t1)
+
+    print(
+        'Here the test results after {} steps.\n[{}]\t Loss {} \t Acc {} \t Examples/Sec = {:.2f}, pos_labels: {}, neg_labels: {}'.format(
+            step, datetime.now().strftime("%Y-%m-%d %H:%M"),
+            loss.item(), acc, examples_per_second, torch.sum(label), len(label) - torch.sum(label)))
+
+    return loss, acc
+
+
 
 def main(config):
     limit = 0
@@ -241,7 +331,15 @@ def main(config):
     if not config.testing:
         train(dl, config)
     else:
-        evaluate(dl, config)
+        word_vocab_size = dl.train_data.vocab_size_words + 1
+        if config.use_LSTM:
+            model = LSTMModel(word_vocab_size, config.hidden_dim, config.num_layers, config.output_dim)
+        else:
+            model = RNNModel(word_vocab_size, config.hidden_dim, config.num_layers, config.output_dim)
+        optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
+        loss, acc = test_eval(dl, 0, model, test_size=500, validation=True, config=config, optimizer=optimizer)
+        print("The accuracy on the validation set is: ", acc)
+        # evaluate(dl, config)
 
 if __name__ == "__main__":
     # Parse training configuration
