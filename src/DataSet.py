@@ -114,7 +114,9 @@ class DataSet(object):
             assert batch_size <= self.num_examples
 
         end = self.index_in_epoch
-        for comment in self.comments[start:end]:
+
+        self.lengths = torch.zeros(len(self.comments[start:end]), dtype=torch.long)
+        for n, comment in enumerate(self.comments[start:end]):
             if padding:
                 comment = [word_tokenize(sent) for sent in sent_tokenize(comment.replace('<br />',''))]
                 comment = [word for sentence in comment for word in sentence]
@@ -122,6 +124,7 @@ class DataSet(object):
                 char_mat = torch.zeros((self.seq_size_words, self.seq_size_chars)).type('torch.LongTensor')
 
                 for i in range(len(comment)):
+                    self.lengths[n] = i
                     if i == self.seq_size_words:
                         print("I cut of this sentence at {}".format(i))
                         break
@@ -150,4 +153,5 @@ class DataSet(object):
             self.x_wrd = torch.stack(self.x_wrd).type('torch.LongTensor')
             self.x_chr = torch.stack(self.x_chr).type('torch.LongTensor')
 
-        return self.x_wrd, self.x_chr, self.y_out[start:end], self.y_score_out[start:end]
+        return self.x_wrd, self.x_chr, self.y_out[start:end], self.y_score_out[start:end], \
+                self.lengths

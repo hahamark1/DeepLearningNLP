@@ -12,7 +12,7 @@ from torchtext.vocab import Vectors, GloVe, CharNGram, FastText
 from spacy.tokenizer import Tokenizer
 
 
-DATA_PATH = './data'
+DATA_PATH = '../data'
 TRAIN_DATA_PATH = '{}/train'.format(DATA_PATH)
 TEST_DATA_PATH = '{}/test'.format(DATA_PATH)
 VOCAB_PATH = '{}/imdb.vocab'.format(DATA_PATH)
