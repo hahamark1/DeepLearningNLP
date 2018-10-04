@@ -97,7 +97,7 @@ def train(dl, config):
         checkpoint = torch.load(config.checkpoint)
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        epoch = checkpoint['epoch']
+        # epoch = checkpoint['epoch']
         print("Checkpoint loaded")
 
     best_acc = [0]
@@ -270,6 +270,60 @@ def evaluate(dl, config):
         datetime.now().strftime("%Y-%m-%d %H:%M"),
         acc, examples_per_second))
 
+def test_eval(dl, step, model, test_size=1000, validation=False, config=None, optimizer=None):
+    word_seq_size = dl.test_data.seq_size_words
+    chr_seq_size = dl.train_data.seq_size_chars
+    max_sen_len = max(dl.train_data.seq_size_words, dl.test_data.seq_size_words, dl.val_data.seq_size_words)
+    dl.val_data.seq_size_words = max_sen_len
+    if validation == True:
+        # # Load checkpoint
+        if config.checkpoint:
+            checkpoint = torch.load(config.checkpoint)
+            model.load_state_dict(checkpoint['model'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            # epoch = checkpoint['epoch']
+            print("Checkpoint loaded")
+        else:
+            print("No checkpoint supplied!")
+
+    criterion = nn.CrossEntropyLoss()
+    t1 = time.time()
+    # load new batch
+    if validation == False:
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores, batch_lengths = dl.test_data.next_batch(
+            test_size, padding=True, type='long')
+    else:
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores, batch_lengths = dl.val_data.next_batch(
+            test_size, padding=True, type='long')
+
+    if torch.cuda.is_available():
+        batch_inputs_words, batch_inputs_chars, batch_targets_label, batch_targets_scores, batch_lengths = batch_inputs_words.cuda(), batch_inputs_chars.cuda(), batch_targets_label.cuda(), batch_targets_scores.cuda()
+
+    # Forward pass to get output/logits
+    outputs = model(batch_inputs_words, batch_lengths)
+
+    # Calculate Loss: softmax --> cross entropy loss
+    if torch.cuda.is_available():
+        label = batch_targets_label.type('torch.cuda.LongTensor').squeeze()
+    else:
+        label = batch_targets_label.type('torch.LongTensor').squeeze()
+    if validation == True:
+        save_mistakes(outputs, label, batch_inputs_words, dl)
+
+    loss = criterion(outputs, label)
+    acc = calc_accuracy(outputs, label)
+
+    t2 = time.time()
+    examples_per_second = config.batch_size / float(t2 - t1)
+
+    print(
+        'Here the test results after {} steps.\n[{}]\t Loss {} \t Acc {} \t Examples/Sec = {:.2f}, pos_labels: {}, neg_labels: {}'.format(
+            step, datetime.now().strftime("%Y-%m-%d %H:%M"),
+            loss.item(), acc, examples_per_second, torch.sum(label), len(label) - torch.sum(label)))
+
+    return loss, acc
+
+
 
 def main(config):
     # Limit defines the size of the dataset, used for testing the code
@@ -291,7 +345,15 @@ def main(config):
         loss, acc = test(dl, 0, 0, test_size=500, validation=True)
         print("The accuracy on the validation set is: ", acc)
     else:
-        evaluate(dl, config)
+        word_vocab_size = dl.train_data.vocab_size_words + 1
+        if config.use_LSTM:
+            model = LSTMModel(word_vocab_size, config.hidden_dim, config.num_layers, config.output_dim)
+        else:
+            model = RNNModel(word_vocab_size, config.hidden_dim, config.num_layers, config.output_dim)
+        optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
+        loss, acc = test_eval(dl, 0, model, test_size=500, validation=True, config=config, optimizer=optimizer)
+        print("The accuracy on the validation set is: ", acc)
+        # evaluate(dl, config)
 
 
 if __name__ == "__main__":
