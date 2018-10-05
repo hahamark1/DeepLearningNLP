@@ -8,6 +8,3 @@ To recreate the outcomes of the project one can use the 3 bash files: run_RNN.sh
 The dataset used can be found in the data folder. This is a txt file which was given by the [Twitter Sentiment Dataset](http://crowdsourcing-class.org/assignments/downloads/pak-paroubek.pdf) found on [Github](https://github.com/satwantrana/CharSCNN/blob/master/tweets_clean.txt)
 
 We performed the training of the different models on a supercomputer provided by SURF-SARA. This might mean that you cannot obtain the same results locally.
-
-Report: https://v2.overleaf.com/19995123svnynzwypckf
-Presentation: https://www.overleaf.com/1486869513tnhdwjszbhzc
